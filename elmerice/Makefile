@@ -52,15 +52,16 @@ Solvers/UpdateExport.F90 \
 Solvers/IntegrateVertically.F90\
 Solvers/EnthalpySolver.F90
 USFSOURCE := \
-UserFunctions/Buoyancy.F90 \
-UserFunctions/USF_Contact.F90 \
-UserFunctions/CaffeFlow.F90 \
-UserFunctions/USF_LateralFriction.F90 \
-UserFunctions/USF_ShapeFactor.F90 \
-UserFunctions/USF_Sliding.F90 \
-UserFunctions/USF_Zs.F90\
-UserFunctions/USF_GetFrictionHeating.F90 \
+UserFunctions/Buoyancy.f90 \
+UserFunctions/USF_Contact.f90 \
+UserFunctions/CaffeFlow.f90 \
+UserFunctions/USF_LateralFriction.f90 \
+UserFunctions/USF_ShapeFactor.f90 \
+UserFunctions/USF_Sliding.f90 \
+UserFunctions/USF_Zs.f90\
+UserFunctions/USF_GetFrictionHeating.f90 \
 UserFunctions/USF_WaterTransfer.F90
+UserFunctions/USF_Damage.f90
 
 solverobjects := $(filter %.o,$(patsubst %.F90,%.o,$(SOLVERSOURCE))) $(filter %.o,$(patsubst %.f,%.o,$(SOLVERSOURCE)))
 usfobjects := $(patsubst %.F90,%.o,$(USFSOURCE))
