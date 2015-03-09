@@ -10,7 +10,16 @@
 #cmakedefine FC_CHAR_PTR${FC_CHAR_PTR}
 #cmakedefine ELMER_SOLVER_HOME "${ELMER_SOLVER_HOME}"
 
+#cmakedefine HAVE_CUDA @HAVE_CUDA@
 #cmakedefine OFF_KIND @OFF_KIND@
+
+#cmakedefine USE_GPU_SOLVER @USE_GPU_SOLVER@
+
+/* Define if you have Trilinos. */
+#cmakedefine HAVE_TRILINOS @HAVE_TRILINOS@
+
+/* Define if you have MUMPS. */
+#cmakedefine HAVE_MUMPS @HAVE_MUMPS@
 
 /* These require more work */
 #cmakedefine STDCALLBULL @FC_STDCALLBULL@

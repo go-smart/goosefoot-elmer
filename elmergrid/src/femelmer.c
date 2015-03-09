@@ -50,7 +50,7 @@
 #include "femknot.h"
 #include "femsolve.h"
 #include "femelmer.h"
-#include "../config.h"
+#include "config.h"
 
 
 #define getline fgets(line,MAXLINESIZE,in) 

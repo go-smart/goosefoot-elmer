@@ -30,10 +30,11 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-#include "../config.h"
+#include "config.h"
+#include "FC.h"
 
 #ifndef HAVE_F_ETIME
-float FC_FUNC(etime,ETIME)(tt)
+float FC_GLOBAL(etime,ETIME)(tt)
 float tt[2];
 {
    int who;
@@ -47,7 +48,7 @@ float tt[2];
 #endif
 
 #ifndef HAVE_F_FLUSH
-void FC_FUNC(flush,FLUSH) (int n)
+void FC_GLOBAL(flush,FLUSH) (int n)
 {
   /*  might as well flush a toilet...? */
 }
@@ -58,32 +59,32 @@ void FC_FUNC(flush,FLUSH) (int n)
    
    These are always used for the non-mpi version.
  */
-void FC_FUNC_(mpi_init,MPI_INIT) 
+void FC_GLOBAL_(mpi_init,MPI_INIT) 
      (int *p) { *p = 0; }
-void FC_FUNC_(mpi_comm_size,MPI_COMM_SIZE) 
+void FC_GLOBAL_(mpi_comm_size,MPI_COMM_SIZE) 
      (int *a, int *b, int *c) { *b = 1; *c = 0;}
-void FC_FUNC_(mpi_comm_rank,MPI_COMM_RANK) 
+void FC_GLOBAL_(mpi_comm_rank,MPI_COMM_RANK) 
      (int *a, int *b, int *c) { *b = 0; *c = 0;}
-void FC_FUNC_(mpi_recv,MPI_RECV) 
+void FC_GLOBAL_(mpi_recv,MPI_RECV) 
      (int *a,int *b,int *c,int *d,int *e,int *f,int *g,int *h) {}
-void FC_FUNC_(mpi_send,MPI_SEND)
+void FC_GLOBAL_(mpi_send,MPI_SEND)
      (int *a,int *b,int *c,int *d,int *e,int *f,int *g) {}
-void FC_FUNC_(mpi_bcast,MPI_BCAST) () {}
-void FC_FUNC_(mpi_barrier,MPI_BARRIER)
+void FC_GLOBAL_(mpi_bcast,MPI_BCAST) () {}
+void FC_GLOBAL_(mpi_barrier,MPI_BARRIER)
      (int *a,int *b) {}
-void FC_FUNC_(mpi_finalize,MPI_FINALIZE)
+void FC_GLOBAL_(mpi_finalize,MPI_FINALIZE)
      (int *a) {}
-void FC_FUNC_(mpi_dup_fn,MPI_DUP_FN) () {}
-void FC_FUNC_(mpi_null_copy_fn,MPI_NULL_COPY_FN) () {}
-void FC_FUNC_(mpi_buffer_detach,MPI_BUFFER_DETACH) () {}
-void FC_FUNC_(mpi_bsend,MPI_BSEND) () {}
-void FC_FUNC_(mpi_null_delete_fn,MPI_NULL_DELETE_FN) () {}
-void FC_FUNC_(mpi_buffer_attach,MPI_BUFFER_ATTACH) () {}
+void FC_GLOBAL_(mpi_dup_fn,MPI_DUP_FN) () {}
+void FC_GLOBAL_(mpi_null_copy_fn,MPI_NULL_COPY_FN) () {}
+void FC_GLOBAL_(mpi_buffer_detach,MPI_BUFFER_DETACH) () {}
+void FC_GLOBAL_(mpi_bsend,MPI_BSEND) () {}
+void FC_GLOBAL_(mpi_null_delete_fn,MPI_NULL_DELETE_FN) () {}
+void FC_GLOBAL_(mpi_buffer_attach,MPI_BUFFER_ATTACH) () {}
 
 /* parpack */
-void FC_FUNC(pdneupd,PDNEUPD) () {}
-void FC_FUNC(pdseupd,PDSEUPD) () {}
-void FC_FUNC(pdsaupd,PDSAUPD) () {}
-void FC_FUNC(pdnaupd,PDNAUPD) () {}
+void FC_GLOBAL(pdneupd,PDNEUPD) () {}
+void FC_GLOBAL(pdseupd,PDSEUPD) () {}
+void FC_GLOBAL(pdsaupd,PDSAUPD) () {}
+void FC_GLOBAL(pdnaupd,PDNAUPD) () {}
 
 /* #endif  */

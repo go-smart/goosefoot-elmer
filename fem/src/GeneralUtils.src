@@ -34,7 +34,7 @@
 ! *
 ! *****************************************************************************/
 
-#include "../config.h"
+#include "config.h"
 
 !> \ingroup ElmerLib
 !> \}
@@ -839,13 +839,13 @@ CONTAINS
 #endif
      CHARACTER(LEN=12) :: tmpstr
      CHARACTER(LEN=MAXLEN) :: readstr = ' ', copystr = ' ', matcstr=' ' , IncludePath=' '
+     INTEGER, PARAMETER :: A=ICHAR('A'),Z=ICHAR('Z'),U2L=ICHAR('a')-ICHAR('A'),Tab=9
 
      LOGICAL :: InsideQuotes, OpenSection=.FALSE.
      INTEGER :: i,j,k,m,ValueStarts=0,inlen,ninlen,outlen,IncludeUnit=28,IncludeUnitBase=28
 
      CHARACTER(LEN=MAX_NAME_LEN) :: Prefix = '  '
 
-     INTEGER, PARAMETER :: A=ICHAR('A'),Z=ICHAR('Z'),U2L=ICHAR('a')-ICHAR('A'),Tab=9
      CHARACTER(LEN=MAXLEN) :: tmatcstr, tcmdstr
      INTEGER :: tninlen
 
@@ -978,7 +978,7 @@ CONTAINS
             tninlen = ninlen
             tcmdstr = copystr(i+1:inlen)
             CALL MATC( tcmdstr, tmatcstr, tninlen )
-			!$OMP BARRIER
+            !$OMP BARRIER
 
             !$OMP SINGLE
             matcstr(1:tninlen) = tmatcstr(1:tninlen)

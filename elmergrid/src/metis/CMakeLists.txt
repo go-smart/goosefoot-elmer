@@ -11,6 +11,7 @@ SET(metis_SRCS balance.c bucketsort.c ccgraph.c coarsen.c compress.c
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/elmergrid/src/metis)
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/elmergrid/src/metis)
+INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/elmergrid)
 
 ADD_LIBRARY(metis ${metis_SRCS})
 

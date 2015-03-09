@@ -15,8 +15,9 @@ Simulation
   Output Intervals = 1
 
 ! Output File = "TempDist.dat"
-! Post File = "TempDist.ep"
+! Post File = "TempDist.vtu"
 End
+
 
 Constants
   Gravity(4) = 0 -1 0 9.82
@@ -58,34 +59,46 @@ Solver 1
   Namespace = string "heateq 1:"
 End
 
+!Solver 2
+!  Exec Solver = "Always"
+
+!  Equation = "he2"
+!  Variable = "T2"
+!  Procedure = "HeatSolve" "HeatSolver"
+
+!  Linear System Solver = "Direct"
+
+!  Steady State Convergence Tolerance = 1.0e-05
+
+!  Stabilize = True
+
+!  Nonlinear System Convergence Tolerance = 1.0e-05
+!  Nonlinear System Max Iterations = 1
+!  Nonlinear System Relaxation Factor = 1.0
+!  Nonlinear System Newton After Iterations = 3
+!  Nonlinear System Newton After Tolerance = 1.0e-02
+
+!  Namespace = string "heateq 2:"
+!End
+
 Solver 2
-  Exec Solver = "Always"
-
-  Equation = "he2"
-  Variable = "T2"
-  Procedure = "HeatSolve" "HeatSolver"
-
-  Linear System Solver = "Direct"
-
-  Steady State Convergence Tolerance = 1.0e-05
-
-  Stabilize = True
-
-  Nonlinear System Convergence Tolerance = 1.0e-05
-  Nonlinear System Max Iterations = 1
-  Nonlinear System Relaxation Factor = 1.0
-  Nonlinear System Newton After Iterations = 3
-  Nonlinear System Newton After Tolerance = 1.0e-02
-
-  Namespace = string "heateq 2:"
+  Equation = Result Output
+  Output Format = Vtu
+  Procedure = "ResultOutputSolve" "ResultOutputSolver"
+Exec Solver = after saving
+  Output File Name = case
+  Binary Output = False
+  Exec Solver = Always
 End
+
 
 Material 1
   Name = "Material1"
 
   Density = real 1
-  heateq 1: Heat Conductivity = equals nonlin iter
-  heateq 2: Heat Conductivity = real 1
+!  heateq 1: Heat Conductivity = equals nonlin iter
+  heateq 1: Heat Conductivity = real 1
+!  heateq 2: Heat Conductivity = real 1
 End
 
 Body Force 1
@@ -95,10 +108,12 @@ End
 
 Boundary Condition 1
   Name = "Constraint1"
+  Normal-Tangential T1 = Logical True
   Target Boundaries(6) = 1 2 3 4 5 6 
-
-  T1 = Real 0
-  T2 = Real 0
+!  T1 = Real 0.0
+  Slip Coefficient = Real 0.1
+!  T1 = Real 0
+!  T2 = Real 0
 End
 
 $fprintf( stderr, "TEST CASE 1\n");

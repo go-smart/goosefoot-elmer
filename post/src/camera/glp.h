@@ -35,7 +35,7 @@
 
 #ifndef _GL_GLP_H_
 #  define _GL_GLP_H_
-#include "../../config.h"
+#include "config.h"
 
 #if defined(WIN32) ||defined(MINGW32)
 #include <windows.h>
@@ -49,7 +49,7 @@
 // Include necessary headers.
 //
 #include <GL/gl.h>
-#include "../../config.h"
+#include "config.h"
 
 
 

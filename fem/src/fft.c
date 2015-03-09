@@ -308,7 +308,7 @@
 #include <math.h>
 #include <stdio.h>
 
-#include "../config.h"
+#include "config.h"
 
 #define FALSE 0
 #define TRUE  1
@@ -681,7 +681,7 @@ void cfftb( N, F, T )
     for( k = 0; k < N; k++ ) T[k].Imag = -T[k].Imag;
 }
 
-void FC_FUNC(fcfftb,FCFFTB)( N, F, T )
+void FC_GLOBAL(fcfftb,FCFFTB)( N, F, T )
     int *N;
     COMPLEX *F;
     COMPLEX *T;
@@ -874,7 +874,7 @@ rfftb( N, F, T )
 }
 
 
-FC_FUNC(frfftb,FRFFTB)( N, F, T )
+FC_GLOBAL(frfftb,FRFFTB)( N, F, T )
     int *N;
     COMPLEX *F;
     double   *T;

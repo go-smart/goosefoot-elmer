@@ -6,7 +6,8 @@
 !> that speeds up the interpolation.
 !------------------------------------------------------------------------------
      SUBROUTINE InterpolateMeshToMesh( OldMesh, NewMesh, OldVariables, &
-            NewVariables, UseQuadrantTree, Projector, MaskName )
+            NewVariables, UseQuadrantTree, Projector, MaskName, &
+            CylindricSymmetricSolver, AffineBackTransformation )
 !------------------------------------------------------------------------------
        USE Lists
        USE SParIterComm
@@ -19,6 +20,8 @@
        LOGICAL, OPTIONAL :: UseQuadrantTree
        TYPE(Projector_t), POINTER, OPTIONAL :: Projector
        CHARACTER(LEN=*),OPTIONAL :: MaskName
+       LOGICAL, OPTIONAL :: CylindricSymmetricSolver
+       REAL(KIND=dp), POINTER, OPTIONAL :: AffineBackTransformation(:,:)
 !-------------------------------------------------------------------------------
        INTEGER, ALLOCATABLE :: perm(:), vperm(:)
        INTEGER, POINTER :: nperm(:)
@@ -27,7 +30,7 @@
        TYPE(VAriable_t), POINTER :: Var, nVar
        INTEGER :: i,j,k,l,nfound,maxrecv,n,ierr,nvars,npart,proc,status(MPI_STATUS_SIZE)
        REAL(KIND=dp) :: myBB(6), eps2, dn
-       REAL(KIND=dp), POINTER :: store(:)
+       REAL(KIND=dp), POINTER :: store(:), Axisy
        REAL(KIND=dp), ALLOCATABLE, TARGET :: astore(:),vstore(:,:), BB(:,:), &
              nodes_x(:),nodes_y(:),nodes_z(:), xpart(:), ypart(:), zpart(:)
 
@@ -46,20 +49,25 @@
 !-------------------------------------------------------------------------------
        INTERFACE
          SUBROUTINE InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, &
-             NewVariables, UseQuadrantTree, Projector, MaskName, FoundNodes )
+             NewVariables, UseQuadrantTree, Projector, MaskName, FoundNodes, &
+             CylindricSymmetricSolver, AffineBackTransformation )
            USE Types
            TYPE(Variable_t), POINTER, OPTIONAL :: OldVariables, NewVariables
            TYPE(Mesh_t), TARGET  :: OldMesh, NewMesh
            LOGICAL, OPTIONAL :: UseQuadrantTree,FoundNodes(:)
            CHARACTER(LEN=*),OPTIONAL :: MaskName
            TYPE(Projector_t), POINTER, OPTIONAL :: Projector
+           LOGICAL, OPTIONAL :: CylindricSymmetricSolver
+           REAL(KIND=dp), POINTER, OPTIONAL :: AffineBackTransformation(:,:)
          END SUBROUTINE InterpolateMeshToMeshQ
        END INTERFACE
 !-------------------------------------------------------------------------------
 
       IF ( ParEnv % PEs<=1 ) THEN
          CALL InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, &
-            NewVariables, UseQuadrantTree, Projector, MaskName )
+            NewVariables, UseQuadrantTree, Projector, MaskName, &
+            CylindricSymmetricSolver=CylindricSymmetricSolver, &
+            AffineBackTransformation=AffineBackTransformation)
          RETURN
       END IF
 
@@ -68,7 +76,9 @@
       ! -----------------------------------------------------
       ALLOCATE( FoundNodes(NewMesh % NumberOfNodes) ); FoundNodes=.FALSE.
       CALL InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, &
-         NewVariables, UseQuadrantTree, MaskName=MaskName, FoundNodes=FoundNodes )
+         NewVariables, UseQuadrantTree, MaskName=MaskName, FoundNodes=FoundNodes, &
+         CylindricSymmetricSolver=CylindricSymmetricSolver, &
+         AffineBackTransformation=AffineBackTransformation)
 
       ! special case "all found":
       !--------------------------
@@ -276,7 +286,9 @@
         ! ----------------------------------------
         ALLOCATE( FoundNodes(n) ); FoundNodes=.FALSE.
         CALL InterpolateMeshToMeshQ( OldMesh, nMesh, OldVariables, &
-           nMesh % Variables, UseQuadrantTree, MaskName=MaskName, FoundNodes=FoundNodes )
+           nMesh % Variables, UseQuadrantTree, MaskName=MaskName, FoundNodes=FoundNodes,&
+                    CylindricSymmetricSolver=CylindricSymmetricSolver, &
+         AffineBackTransformation=AffineBackTransformation)
 
         nfound = COUNT(FoundNodes)
 
@@ -472,7 +484,8 @@ CONTAINS
 !>    the old model to the mesh of the new model.
 !------------------------------------------------------------------------------
      SUBROUTINE InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, &
-            NewVariables, UseQuadrantTree, Projector, MaskName, FoundNodes )
+            NewVariables, UseQuadrantTree, Projector, MaskName, FoundNodes, &
+            CylindricSymmetricSolver, AffineBackTransformation )
 !------------------------------------------------------------------------------
        USE DefUtils
 !-------------------------------------------------------------------------------
@@ -484,11 +497,13 @@ CONTAINS
        TYPE(Projector_t), POINTER, OPTIONAL :: Projector  !< Use projector between meshes for interpolation, if available
        CHARACTER(LEN=*),OPTIONAL :: MaskName  !< Mask the old variable set by the given MaskName when trying to define the interpolation.
        LOGICAL, OPTIONAL :: FoundNodes(:)     !< List of nodes where the interpolation was a success
+       LOGICAL, OPTIONAL :: CylindricSymmetricSolver 
+       REAL(KIND=dp), POINTER, OPTIONAL :: AffineBackTransformation(:,:)
 !------------------------------------------------------------------------------
        INTEGER :: dim
        TYPE(Nodes_t) :: ElementNodes
        INTEGER :: nBulk, i, j, k, l, n, np, bf_id, QTreeFails, TotFails
-       REAL(KIND=dp), DIMENSION(3) :: Point
+       REAL(KIND=dp), DIMENSION(3) :: Point, NewPoint
        INTEGER, POINTER :: Indexes(:)
        REAL(KIND=dp), DIMENSION(3) :: LocalCoordinates
        TYPE(Variable_t), POINTER :: OldSol, NewSol, Var
@@ -625,6 +640,21 @@ CONTAINS
          Point(2) = NewMesh % Nodes % y(i)
          Point(3) = NewMesh % Nodes % z(i)
 
+         IF (PRESENT(AffineBackTransformation)) THEN
+           NewPoint = Point
+           Point(1) = SUM(AffineBackTransformation(1:3,1) * NewPoint) + AffineBackTransformation(4,1)
+           Point(2) = SUM(AffineBackTransformation(1:3,2) * NewPoint) + AffineBackTransformation(4,2)
+           Point(3) = SUM(AffineBackTransformation(1:3,3) * NewPoint) + AffineBackTransformation(4,3)
+         END IF
+
+         IF (CylindricSymmetricSolver) THEN
+           Point(1) = Point(1) ** 2 + Point(3) ** 2
+           IF (Point(1) > 0._dp) THEN
+             Point(1) = SQRT(Point(1))
+           END IF
+           Point(3) = 0._dp
+         END IF
+
 !------------------------------------------------------------------------------
 ! Find in which old mesh bulk element the point belongs to
 !------------------------------------------------------------------------------
@@ -749,7 +779,6 @@ CONTAINS
 !
 !               Interpolate variable at Point in Element:
 !               ------------------------------------------------
-
                 NewSol => VariableGet( NewMesh % Variables, Var % Name, .TRUE. )
                 IF ( .NOT. ASSOCIATED( NewSol ) ) THEN
                    Var => Var % Next

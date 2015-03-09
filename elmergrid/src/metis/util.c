@@ -12,7 +12,7 @@
  */
 
 #include <metis.h>
-#include "../../config.h"
+#include "config.h"
 
 /*************************************************************************
 * This function prints an error message and exits

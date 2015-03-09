@@ -1,4 +1,4 @@
-#include "../config.h"
+#include "config.h"
 
 #ifdef HAVE_CHOLMOD
 #include "cholmod.h"
@@ -14,7 +14,7 @@ typedef struct {
 } cholmod;
 
 
-cholmod STDCALLBULL *FC_FUNC_(cholmod_ffactorize,CHOLMOD_FFACTORIZE)(int *n,int *rows,int *cols,double *vals)
+cholmod STDCALLBULL *FC_GLOBAL_(cholmod_ffactorize,CHOLMOD_FFACTORIZE)(int *n,int *rows,int *cols,double *vals)
 {
   static double *y;
   int i,j,nz,ok,*p,*q;
@@ -42,7 +42,7 @@ cholmod STDCALLBULL *FC_FUNC_(cholmod_ffactorize,CHOLMOD_FFACTORIZE)(int *n,int 
   return handle;
 }
 
-void STDCALLBULL FC_FUNC_(cholmod_fsolve,CHOLMOD_FSOLVE)(cholmod **handle,int *n,double *x, double *b)
+void STDCALLBULL FC_GLOBAL_(cholmod_fsolve,CHOLMOD_FSOLVE)(cholmod **handle,int *n,double *x, double *b)
 {
   double *xx,*bb;
   int i;
@@ -61,7 +61,7 @@ void STDCALLBULL FC_FUNC_(cholmod_fsolve,CHOLMOD_FSOLVE)(cholmod **handle,int *n
 }
 
 
-void STDCALLBULL FC_FUNC_(cholmod_ffree,CHOLMOD_FFREE)(cholmod **handle)
+void STDCALLBULL FC_GLOBAL_(cholmod_ffree,CHOLMOD_FFREE)(cholmod **handle)
 {
   cholmod_free_factor(&(*handle)->l,&(*handle)->c);
   cholmod_finish(&(*handle)->c);
@@ -69,7 +69,7 @@ void STDCALLBULL FC_FUNC_(cholmod_ffree,CHOLMOD_FFREE)(cholmod **handle)
 }
 
 
-cholmod STDCALLBULL *FC_FUNC_(spqr_ffactorize,SPQR_FFACTORIZE)(int *n,int *rows,int *cols,double *vals)
+cholmod STDCALLBULL *FC_GLOBAL_(spqr_ffactorize,SPQR_FFACTORIZE)(int *n,int *rows,int *cols,double *vals)
 {
   cholmod *handle;
   long int *pp,*ii;
@@ -125,7 +125,7 @@ cholmod STDCALLBULL *FC_FUNC_(spqr_ffactorize,SPQR_FFACTORIZE)(int *n,int *rows,
   return handle;
 }
 
-void STDCALLBULL FC_FUNC_(spqr_fsolve,SPQR_FSOLVE)(cholmod **handle,int *n,double *x, double *b)
+void STDCALLBULL FC_GLOBAL_(spqr_fsolve,SPQR_FSOLVE)(cholmod **handle,int *n,double *x, double *b)
 {
   double *xx,*bb;
   int i,j,k,rank,nsize;
@@ -145,13 +145,13 @@ void STDCALLBULL FC_FUNC_(spqr_fsolve,SPQR_FSOLVE)(cholmod **handle,int *n,doubl
   cholmod_l_free_dense(&db, &(*handle)->c);
 }
 
-void STDCALLBULL FC_FUNC_(spqr_nz,SPQR_NZ)(cholmod **handle,int *nz)
+void STDCALLBULL FC_GLOBAL_(spqr_nz,SPQR_NZ)(cholmod **handle,int *nz)
 {
    int i,j,k;
    *nz=(*handle)->nz;
 }
 
-void STDCALLBULL FC_FUNC_(spqr_nullspace,SPQR_NULLSPACE)(cholmod **handle,int *n,int *nz,double *z)
+void STDCALLBULL FC_GLOBAL_(spqr_nullspace,SPQR_NULLSPACE)(cholmod **handle,int *n,int *nz,double *z)
 {
    int i,j,k;
    *nz=(*handle)->nz;
@@ -165,7 +165,7 @@ void STDCALLBULL FC_FUNC_(spqr_nullspace,SPQR_NULLSPACE)(cholmod **handle,int *n
 
 
 
-int STDCALLBULL FC_FUNC_(spqr_ffree,SPQR_FFREE)(cholmod **handle)
+int STDCALLBULL FC_GLOBAL_(spqr_ffree,SPQR_FFREE)(cholmod **handle)
 {
   if(!(*handle)->qr) return -1;
 

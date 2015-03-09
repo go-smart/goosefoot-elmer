@@ -26,14 +26,28 @@ SET(ELMER_FEM_VERSION
 
 SET(VERSION ${ELMER_FEM_VERSION})
 SET(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
-
+SET(MUMPS_INCLUDE "/usr/include")
 FIND_PACKAGE(MPI REQUIRED)
 ADD_DEFINITIONS(${MPI_Fortran_COMPILE_FLAGS})
 INCLUDE_DIRECTORIES(${MPI_Fortran_INCLUDE_PATH})
+INCLUDE_DIRECTORIES(${MUMPS_INCLUDE})
 LINK_DIRECTORIES(${MPI_Fortran_LIBRARIES})
+
+#FIND_PACKAGE(CUDA)
+#SET(HAVE_CUDA ${CUDA_FOUND})
+#IF(HAVE_CUDA)
+#   ADD_SUBDIRECTORY(cuda_hutiter)
+#ENDIF(HAVE_CUDA)
 
 FIND_PACKAGE(BLAS REQUIRED)
 FIND_PACKAGE(LAPACK REQUIRED)
+
+#FIND_PACKAGE(Trilinos)
+#SET(HAVE_TRILINOS ${Trilinos_FOUND})
+FIND_PACKAGE(Mumps)
+SET(HAVE_MUMPS ${Mumps_FOUND})
+MESSAGE(${HAVE_MUMPS})
+
 
 # Check if Fortran compiler supports contiguous keyword
 INCLUDE(testContiguous)
@@ -50,6 +64,13 @@ SET(FC_FUNC_ FC_GLOBAL_)
 INCLUDE(FortranCInterface)
 FortranCInterface_HEADER(FCMangle.h MACRO_NAMESPACE "FC_")
 FortranCInterface_VERIFY(CXX)
+
+SET(CMAKE_Fortran_MODULE_DIRECTORY
+    ${PROJECT_BINARY_DIR}/bin/fortran CACHE PATH "Build directory for Fortran modules."
+)
+SET(CMAKE_Fortran_MODULE_DESTINATION
+    ${CMAKE_INSTALL_PREFIX}/include/elmer/f90 CACHE PATH "Destination for Fortran modules."
+)
 
 ADD_SUBDIRECTORY(umfpack)
 ADD_SUBDIRECTORY(hutiter)
@@ -73,7 +94,7 @@ MESSAGE(STATUS "------------------------------------------------")
 MESSAGE(STATUS "  MPI C:             " ${MPI_C_FOUND})
 MESSAGE(STATUS "  MPI C compiler:    " ${MPI_C_COMPILER} 
   ${MPI_C_COMPILER_FLAGS})
-MESSAGE(STATUS "  MPI C include dir: " ${MPI_C_INCLUDE_PATH})
-MESSAGE(STATUS "  MPI C libraries:   " ${MPI_C_LIBRARIES})
-MESSAGE(STATUS "  MPI C flags:       " ${MPI_C_LINK_FLAGS})
+MESSAGE(STATUS "  MPI C include dir: " ${MPI_Fortran_INCLUDE_PATH})
+MESSAGE(STATUS "  MPI C libraries:   " ${MPI_Fortran_LIBRARIES})
+MESSAGE(STATUS "  MPI C flags:       " ${MPI_Fortran_LINK_FLAGS})
 MESSAGE(STATUS "------------------------------------------------")

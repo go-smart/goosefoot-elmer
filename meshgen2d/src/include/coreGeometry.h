@@ -4,7 +4,7 @@
 #include <float.h>
 #include <algorithm>
 
-#include "../../config.h"
+#include "config.h"
 #if defined(_NO_STD_MINMAX) || defined(WIN32)
 	#include "minmaxpatch.h"
 #endif

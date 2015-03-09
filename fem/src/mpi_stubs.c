@@ -1,4 +1,4 @@
-#include "../config.h"
+#include "config.h"
 
 #ifndef HAVE_MPI_STUBS
 void mpi_file_open_(){};

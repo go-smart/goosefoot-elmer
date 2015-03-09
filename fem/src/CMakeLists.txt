@@ -3,6 +3,14 @@ ADD_SUBDIRECTORY(modules)
 
 SET(prefix "${CMAKE_INSTALL_PREFIX}")
 
+IF(HAVE_TRILINOS)
+    INCLUDE_DIRECTORIES("${Trilinos_INCLUDE_DIRS}")
+ENDIF(HAVE_TRILINOS)
+
+IF(HAVE_CUDA)
+    INCLUDE_DIRECTORIES("${CUDA_INCLUDE_DIRS}")
+ENDIF(HAVE_CUDA)
+
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/elmerf90.in.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/elmerf90)
 
@@ -26,10 +34,12 @@ SET(solverlib_SOURCES NavierStokes.F90 NavierStokesGeneral.F90
   ParallelEigenSolve.F90 solve_cmplx.F90 solve_real.F90 MGPrec.F90
   DefUtils.F90 LUDecomposition.F90 RadiationFactors.F90 f_stubs.c
   ExchangeCorrelations.F90 SolveHypre.c SolverActivate_x.F90
-  SolveTrilinos.cxx SolveSuperLU.c iso_varying_string.F90
-  umf4_f77wrapper.c VankaCreate.F90 ParticleUtils.F90 Feti.F90
-  cholmod.c InterpolateMeshToMesh.F90 BackwardError.F90
-  ElmerSolver.F90)
+  SolveTrilinosEpetra.cxx SolveTrilinosKokkos.cxx
+  SolveSuperLU.c iso_varying_string.F90
+  umf4_f77wrapper.c VankaCreate.F90 ParticleUtils.F90 Feti.F90 cholmod.c
+  InterpolateMeshToMesh.F90 BackwardError.F90
+  ElmerSolver.F90 MagnetoDynamicsUtils.F90
+  NumaSolverUtils.F90 NumaAdaptive.F90)
 
 FILE(GLOB SRC_FILES *.src)
 FOREACH(FNAME ${SRC_FILES})
@@ -46,17 +56,23 @@ INCLUDE_DIRECTORIES("${CMAKE_BINARY_DIR}/fem/src")
 INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/hutiter/src")
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/binio")
 
+
 ADD_LIBRARY(elmersolver SHARED ${solverlib_SOURCES})
-TARGET_LINK_LIBRARIES(elmersolver ${MPI_Fortran_LIBRARIES} matc eioc
-  eiof umfpack amd huti ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} arpack
-  parpack binio)
+
+TARGET_LINK_LIBRARIES(elmersolver
+  ${MPI_Fortran_LIBRARIES} ${MPI_CXX_LIBRARIES}
+  matc eioc eiof umfpack amd huti ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} ${MUMPS_LIBRARIES} arpack
+  parpack binio ${Trilinos_LIBRARIES})
 
 ADD_EXECUTABLE(ElmerSolver_mpi Solver.F90)
 
 TARGET_LINK_LIBRARIES(ElmerSolver_mpi elmersolver matc huti eioc eiof
-  umfpack amd ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} arpack parpack binio
+  umfpack amd ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} ${MUMPS_LIBRARIES} arpack parpack binio
   ${CMAKE_DL_LIBS})
 
 INSTALL(FILES elements.def SOLVER.KEYWORDS DESTINATION "share/elmersolver/lib")
 INSTALL(TARGETS ElmerSolver_mpi elmersolver RUNTIME DESTINATION "bin" LIBRARY DESTINATION "lib") 
 INSTALL(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/elmerf90 DESTINATION "bin")
+INSTALL(CODE
+    "EXECUTE_PROCESS (COMMAND \"${CMAKE_COMMAND}\" -E copy_directory \"${CMAKE_Fortran_MODULE_DIRECTORY}/\${BUILD_TYPE}\" \"${CMAKE_Fortran_MODULE_DESTINATION}\")"
+)

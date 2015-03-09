@@ -891,32 +891,36 @@ CONTAINS
 !> If it not to be found in the current mesh, interpolation between
 !> meshes is automatically requested for.
 !------------------------------------------------------------------------------
-    RECURSIVE FUNCTION VariableGet( Variables, Name, ThisOnly, MaskName ) RESULT(Var)
+    RECURSIVE FUNCTION VariableGet( Variables, Name, ThisOnly, MaskName, AffineBackTransformation ) RESULT(Var)
 !------------------------------------------------------------------------------
       TYPE(Variable_t), POINTER :: Variables
       CHARACTER(LEN=*) :: Name
       LOGICAL, OPTIONAL :: ThisOnly
       CHARACTER(LEN=*),OPTIONAL :: MaskName
+      REAL(KIND=dp), POINTER, OPTIONAL :: AffineBackTransformation(:,:)
 !------------------------------------------------------------------------------
       TYPE(Mesh_t), POINTER :: Mesh
       TYPE(Projector_t), POINTER :: Projector
       TYPE(Variable_t), POINTER :: Var,PVar,Tmp,AidVar
       REAL(KIND=dp), POINTER :: Vals(:)
       INTEGER :: i,k,n, DOFs
-      LOGICAL :: Found, GlobalBubbles, UseProjector
+      LOGICAL :: Found, GlobalBubbles, UseProjector, CylindricSymmetricSolver
       CHARACTER(LEN=LEN_TRIM(Name)) :: str
       CHARACTER(LEN=MAX_NAME_LEN) :: tmpname
       DOUBLE PRECISION :: t1,CPUTime
 !------------------------------------------------------------------------------
       INTERFACE
         SUBROUTINE InterpolateMeshToMesh( OldMesh, NewMesh, OldVariables, &
-            NewVariables, UseQuadrantTree, Projector, MaskName )
+            NewVariables, UseQuadrantTree, Projector, MaskName, &
+            CylindricSymmetricSolver, AffineBackTransformation )
           USE Types
           TYPE(Variable_t), POINTER, OPTIONAL :: OldVariables, NewVariables
           TYPE(Mesh_t), TARGET  :: OldMesh, NewMesh
           LOGICAL, OPTIONAL :: UseQuadrantTree
           CHARACTER(LEN=*),OPTIONAL :: MaskName
           TYPE(Projector_t), POINTER, OPTIONAL :: Projector
+          LOGICAL, OPTIONAL :: CylindricSymmetricSolver
+          REAL(KIND=dp), POINTER, OPTIONAL :: AffineBackTransformation(:,:)
         END SUBROUTINE InterpolateMeshToMesh
       END INTERFACE
 !------------------------------------------------------------------------------
@@ -1113,19 +1117,28 @@ CONTAINS
       UseProjector = ListGetLogical(CurrentModel % Simulation,'Use Mesh Projector',Found)
       IF( .NOT. Found ) UseProjector = .TRUE.
 
+      CylindricSymmetricSolver = ListGetLogical(PVar % Solver % Values,'Cylindric Symmetric',Found)
+      IF( .NOT. Found ) CylindricSymmetricSolver = .FALSE.
+
       IF( PRESENT( MaskName ) ) THEN
        CALL InterpolateMeshToMesh( PVar % PrimaryMesh, &
-            CurrentModel % Mesh, Var, Variables, MaskName=MaskName )
+            CurrentModel % Mesh, Var, Variables, MaskName=MaskName, &
+            CylindricSymmetricSolver=CylindricSymmetricSolver, &
+            AffineBackTransformation=AffineBackTransformation)
       ELSE IF( UseProjector ) THEN
         CALL InterpolateMeshToMesh( PVar % PrimaryMesh, &
-            CurrentModel % Mesh, Var, Variables, Projector=Projector )
+            CurrentModel % Mesh, Var, Variables, Projector=Projector, &
+            CylindricSymmetricSolver=CylindricSymmetricSolver, &
+            AffineBackTransformation=AffineBackTransformation)
       ELSE
         AidVar => VariableGet( CurrentModel % Mesh % Variables, Name, ThisOnly = .TRUE. ) 
         IF( ASSOCIATED( AidVar ) ) THEN
           AidVar % Values = 0.0_dp
         END IF
         CALL InterpolateMeshToMesh( PVar % PrimaryMesh, &
-            CurrentModel % Mesh, Var, Variables )        
+            CurrentModel % Mesh, Var, Variables, &
+            CylindricSymmetricSolver=CylindricSymmetricSolver, &
+            AffineBackTransformation=AffineBackTransformation)
       END IF
 
       WRITE( Message,'(A,ES12.3)' ) 'Interpolation time for > '//TRIM(Name)//' < :', CPUTime()-t1

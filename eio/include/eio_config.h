@@ -5,7 +5,7 @@
 #define CDECL 
 #endif
 
-#include "../config.h"
+#include "config.h"
 
 #ifndef AIX
 #ifndef PATH_MAX

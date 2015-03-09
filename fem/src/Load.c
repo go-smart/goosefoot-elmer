@@ -43,8 +43,8 @@
 #include <stdint.h>
 /* #include <elmer/matc.h> maybe in the future */
 
-/* eg. FC_CHAR_PTR and FC_FUNC is defined here */
-#include "../config.h"
+/* eg. FC_CHAR_PTR and FC_GLOBAL is defined here */
+#include "config.h"
 
 #if defined(WIN32) | defined(MINGW32)
 #  include <direct.h>
@@ -78,7 +78,7 @@ void corename_()
 /*--------------------------------------------------------------------------
   work around mingw rxvt shell stdio/err buffering troubles
   -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC_(set_stdio_bufs,SET_STDIO_BUFS) ()
+void STDCALLBULL FC_GLOBAL_(set_stdio_bufs,SET_STDIO_BUFS) ()
 {
    setvbuf( stdout, NULL, _IOLBF, 2048 );
    setvbuf( stderr, NULL, _IONBF, 2048 );
@@ -88,7 +88,7 @@ void STDCALLBULL FC_FUNC_(set_stdio_bufs,SET_STDIO_BUFS) ()
 /*--------------------------------------------------------------------------
   This routine will return the home directory of elmer solver.
   -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC(getsolverhome,GETSOLVERHOME) 
+void STDCALLBULL FC_GLOBAL(getsolverhome,GETSOLVERHOME) 
      ( char *solverDir, int *len)
 {
   *len = 0;
@@ -141,7 +141,7 @@ void STDCALLBULL FC_FUNC(getsolverhome,GETSOLVERHOME)
 /*--------------------------------------------------------------------------
   This routine will create a directory given name of the directory.
   -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC(makedirectory,MAKEDIRECTORY) 
+void STDCALLBULL FC_GLOBAL(makedirectory,MAKEDIRECTORY) 
      (char *Name)
 {
 #if defined(WIN32) || defined(MINGW32)
@@ -156,7 +156,7 @@ void STDCALLBULL FC_FUNC(makedirectory,MAKEDIRECTORY)
 /*--------------------------------------------------------------------------
   This routine execute a operating system command.
   -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC(systemc,SYSTEMC) ( char *str )
+void STDCALLBULL FC_GLOBAL(systemc,SYSTEMC) ( char *str )
 {
    system( str );
 }
@@ -165,7 +165,7 @@ void STDCALLBULL FC_FUNC(systemc,SYSTEMC) ( char *str )
   This routine will return value of a environment variable to a
   given string variable.
   -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC(envir,ENVIR) (char *Name, char *Value, int *len)
+void STDCALLBULL FC_GLOBAL(envir,ENVIR) (char *Name, char *Value, int *len)
 {
     if ( getenv( Name ) ) {
       strncpy( Value,(char *)getenv(Name), MAX_PATH_LEN );
@@ -228,7 +228,7 @@ static void fortranMangle(char *orig, char *mangled)
   This routine will return address of a function given path to a dynamically
   loaded library and name of the routine.
   -------------------------------------------------------------------------*/
-void *STDCALLBULL FC_FUNC(loadfunction,LOADFUNCTION) ( int *Quiet,
+void *STDCALLBULL FC_GLOBAL(loadfunction,LOADFUNCTION) ( int *Quiet,
       int *abort_not_found, char *Library, char *Name )
 {
 /*--------------------------------------------------------------------------*/
@@ -442,7 +442,7 @@ static int IntExec( int (STDCALLBULL *Function)(),void *Model )
 /*--------------------------------------------------------------------------
    Execute given function returning integer value
    -------------------------------------------------------------------------*/
-int STDCALLBULL FC_FUNC(execintfunction,EXECINTFUNCTION) ( f_ptr Function,void *Model )
+int STDCALLBULL FC_GLOBAL(execintfunction,EXECINTFUNCTION) ( f_ptr Function,void *Model )
 {
   return IntExec( (int (STDCALLBULL *)())*Function,Model );
 }
@@ -459,7 +459,7 @@ static void DoubleArrayExec( double *(STDCALLBULL *Function)(), void *Model,
 /*--------------------------------------------------------------------------
    Execute given function returning double value
    -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC(execrealarrayfunction,EXECREALARRAYFUNCTION)
+void STDCALLBULL FC_GLOBAL(execrealarrayfunction,EXECREALARRAYFUNCTION)
      ( f_ptr Function, void *Model,
        int *Node, double *Value, double *Array )
 {
@@ -478,7 +478,7 @@ static double DoubleExec( double (STDCALLBULL *Function)(), void *Model,
 /*--------------------------------------------------------------------------
    Execute given function returning double value
    -------------------------------------------------------------------------*/
-double STDCALLBULL FC_FUNC(execrealfunction,EXECREALFUNCTION)
+double STDCALLBULL FC_GLOBAL(execrealfunction,EXECREALFUNCTION)
      ( f_ptr Function, void *Model,
        int *Node, double *Value )
 {
@@ -497,7 +497,7 @@ static double ConstDoubleExec( double (STDCALLBULL *Function)(), void *Model,
 /*--------------------------------------------------------------------------
    Execute given function returning double value
    -------------------------------------------------------------------------*/
-double STDCALLBULL FC_FUNC(execconstrealfunction,EXECCONSTREALFUNCTION)
+double STDCALLBULL FC_GLOBAL(execconstrealfunction,EXECCONSTREALFUNCTION)
      ( f_ptr Function, void *Model,
        double *x, double *y, double *z )
 {
@@ -508,7 +508,7 @@ double STDCALLBULL FC_FUNC(execconstrealfunction,EXECCONSTREALFUNCTION)
 /*--------------------------------------------------------------------------
    Return argument (just to fool Fortran type checking)
    -------------------------------------------------------------------------*/
-void *STDCALLBULL FC_FUNC(addrfunc,ADDRFUNC) ( void *Function )
+void *STDCALLBULL FC_GLOBAL(addrfunc,ADDRFUNC) ( void *Function )
 {
    return (void *)Function;
 }
@@ -526,7 +526,7 @@ static void DoExecSolver(
 /*--------------------------------------------------------------------------
    Call solver routines at given address
    -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC(execsolver,EXECSOLVER)
+void STDCALLBULL FC_GLOBAL(execsolver,EXECSOLVER)
      ( f_ptr *SolverProc, void *Model, void *Solver, void *dt, void *Transient )
 {
   DoExecSolver( (void (STDCALLBULL *)())*SolverProc,Model,Solver,dt,Transient );
@@ -546,7 +546,7 @@ static int DoLinSolveProcs(
 /*--------------------------------------------------------------------------
    Call lin. solver routines at given address
    -------------------------------------------------------------------------*/
-int STDCALLBULL FC_FUNC(execlinsolveprocs,EXECLINSOLVEPROCS)
+int STDCALLBULL FC_GLOBAL(execlinsolveprocs,EXECLINSOLVEPROCS)
      ( f_ptr *SolverProc, void *Model, void *Solver, void *Matrix, void *b, void *x, void *n, void *DOFs, void *Norm )
 {
    return DoLinSolveProcs( (int (STDCALLBULL *)())*SolverProc,Model,Solver,Matrix,b,x,n,DOFs,Norm );
@@ -558,7 +558,7 @@ void mtc_init(FILE *,FILE *, FILE *);
 /*--------------------------------------------------------------------------
   This routine will call matc and return matc variable array values
   -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC_(matc_get_array,MATC_GET_ARRAY) (char *name, 
+void STDCALLBULL FC_GLOBAL_(matc_get_array,MATC_GET_ARRAY) (char *name, 
            double *values, int *nrows, int *ncols )
 {
   var_copy_transpose(name,values,*nrows,*ncols);
@@ -567,7 +567,7 @@ void STDCALLBULL FC_FUNC_(matc_get_array,MATC_GET_ARRAY) (char *name,
 /*--------------------------------------------------------------------------
   This routine will call matc and return matc result
   -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC(matc,MATC) ( char *cmd, char *Value, int *len )
+void STDCALLBULL FC_GLOBAL(matc,MATC) ( char *cmd, char *Value, int *len )
 {
 #define MAXLEN 8192
 
@@ -631,7 +631,7 @@ static double DoViscFunction(double (STDCALLBULL *SolverProc)(), void *Model, vo
 /*--------------------------------------------------------------------------
   This routine will call user defined material def. function
   -------------------------------------------------------------------------*/
-double STDCALLBULL FC_FUNC(materialuserfunction,MATERIALUSERFUNCTION)
+double STDCALLBULL FC_GLOBAL(materialuserfunction,MATERIALUSERFUNCTION)
   ( f_ptr Function, void *Model, void *Element, void *Nodes, void *n, void *nd, void *Basis, void *GradBasis, void *Viscosity, void *Velo, void *gradV )
 {
    return DoViscFunction( (double (STDCALLBULL *)())*Function,Model,Element,Nodes,n,Basis,
@@ -649,7 +649,7 @@ static void DoSimulationProc( void (STDCALLBULL *SimulationProc)(), void *Model 
 /*--------------------------------------------------------------------------
   This routine will call user defined material def. function
   -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC(execsimulationproc,EXECSIMULATIONPROC)
+void STDCALLBULL FC_GLOBAL(execsimulationproc,EXECSIMULATIONPROC)
      ( f_ptr Function, void *Model )
 {
    DoSimulationProc( (void (STDCALLBULL *)())*Function,Model );
@@ -675,7 +675,7 @@ static void DoIterCall( void (STDCALLBULL *iterProc)(),
 /*--------------------------------------------------------------------------
   This routine will call (Krylov) iterator
   -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC(itercall,ITERCALL)
+void STDCALLBULL FC_GLOBAL(itercall,ITERCALL)
      ( f_ptr iterProc, void *x, void *b, void *ipar, void *dpar, void *work, 
        f_ptr mvProc, f_ptr pcondProc, f_ptr pcondrProc, f_ptr dotProc, f_ptr normProc, f_ptr STOPC )
 {
@@ -700,7 +700,7 @@ static void DoLocalCall( void (STDCALLBULL *localProc)(),
 /*--------------------------------------------------------------------------
   This routine will call local matrix add-on
   -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC(execlocalproc, EXECLOCALPROC )
+void STDCALLBULL FC_GLOBAL(execlocalproc, EXECLOCALPROC )
      ( f_ptr localProc, void *Model,void *Solver,void *G, void *F, void *Element,void *n,void *nd )
 {
    DoLocalCall( (void (STDCALLBULL *)())*localProc,Model,Solver,G,F,Element,n,nd );
@@ -720,7 +720,7 @@ static void DoLocalAssembly( void (STDCALLBULL *LocalAssembly)(),
 /*--------------------------------------------------------------------------
   This routine will call complete local matrix add-on
   -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC(execlocalassembly, EXECLOCALASSEMBLY )
+void STDCALLBULL FC_GLOBAL(execlocalassembly, EXECLOCALASSEMBLY )
      ( f_ptr LocalAssembly, void *Model,void *Solver,void *dt,void *transient,void *M, void *D, void *S,void *F,void *Element,void *n,void *nd )
 {
    DoLocalAssembly( (void (STDCALLBULL *)())*LocalAssembly,Model,Solver,dt,transient,M,D,S,F,Element,n,nd );
@@ -740,7 +740,7 @@ static void DoMatVecSubr( void (STDCALLBULL *matvec)(),
 /*--------------------------------------------------------------------------
   This routine will call complete local matrix add-on
   -------------------------------------------------------------------------*/
-void STDCALLBULL FC_FUNC(matvecsubr, MMATVECSUBR)
+void STDCALLBULL FC_GLOBAL(matvecsubr, MMATVECSUBR)
      ( f_ptr matvec, void **SpMV, void *n, void *rows, void *cols, void *vals, void *u, void *v,void *reinit )
 {
    DoMatVecSubr( (void (STDCALLBULL *)())*matvec,SpMV,n,rows,cols,vals,u,v,reinit);

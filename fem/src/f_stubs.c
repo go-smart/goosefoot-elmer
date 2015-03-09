@@ -23,7 +23,7 @@
 /*
   All kinds of stubs etc that cover up if something is missing from fortran.
  */
-#include "../config.h"
+#include "config.h"
 
 
 #include <sys/types.h>
@@ -47,13 +47,13 @@
 #ifndef HAVE_F_ETIME
 
 #if defined(WIN32) | defined(MINGW32)
-float STDCALLBULL FC_FUNC(etime,ETIME)(tt)
+float STDCALLBULL FC_GLOBAL(etime,ETIME)(tt)
 float tt[2];
 {
   return(.0);
 }
 #else
-float FC_FUNC(etime,ETIME)(tt)
+float FC_GLOBAL(etime,ETIME)(tt)
 float tt[2];
 {
    int who;
@@ -68,7 +68,7 @@ float tt[2];
 #endif // etime_defined
 
 #ifndef HAVE_F_FLUSH
-void STDCALLBULL FC_FUNC(flush,FLUSH) (int n)
+void STDCALLBULL FC_GLOBAL(flush,FLUSH) (int n)
 {
   /*  might as well flush a toilet...? */
 }

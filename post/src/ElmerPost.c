@@ -45,7 +45,7 @@
 
 #define MODULE_MAIN
 #include "elmerpost.h"
-#include "../config.h"
+#include "config.h"
 
 #include <tcl.h>
 #include <tk.h>

@@ -9,6 +9,7 @@ SET(elmergrid_SRCS common.h femdef.h femelmer.h femfilein.h
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/elmergrid/src/metis)
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/elmergrid/src)
+INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/elmergrid)
 
 ADD_EXECUTABLE(ElmerGrid ${elmergrid_SRCS})
 

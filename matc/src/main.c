@@ -24,7 +24,7 @@
 
 #include <stdio.h>
 #include <signal.h>
-#include "../config.h"
+#include "config.h"
 
 #ifdef USE_READLINE
 # ifdef HAVE_READLINE_READLINE_H

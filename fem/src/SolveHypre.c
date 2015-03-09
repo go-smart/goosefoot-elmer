@@ -40,7 +40,7 @@
 ! *****************************************************************************/
 
 
-#include "../config.h"
+#include "config.h"
 
 #ifdef HAVE_HYPRE
 #include <math.h>
@@ -81,7 +81,7 @@ HYPRE_Solver solver, precond;
                 - convert vector x back
                 - destroy all data structures
 */
-void STDCALLBULL FC_FUNC(solvehypre,SOLVEHYPRE)
+void STDCALLBULL FC_GLOBAL(solvehypre,SOLVEHYPRE)
  (
   int *nrows,int *rows, int *cols, double *vals, int *perm,
   int *invperm, int *globaldofs, int *owner,  double *xvec,
@@ -396,7 +396,7 @@ void STDCALLBULL FC_FUNC(solvehypre,SOLVEHYPRE)
  BILU=0 or 1 - use A. 
  BILU=k - assume k equations and use block diagonal A with k blocks.
 */
-void STDCALLBULL FC_FUNC(solvehypre1,SOLVEHYPRE1)
+void STDCALLBULL FC_GLOBAL(solvehypre1,SOLVEHYPRE1)
  (
   int *nrows,int *rows, int *cols, double *vals, int *precflag, double *precvals, 
     int *globaldofs, int *owner, int *ILUn, int *BILU, int *hypre_method,
@@ -881,7 +881,7 @@ void STDCALLBULL FC_FUNC(solvehypre1,SOLVEHYPRE1)
 /*////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 /* solve a linear system with previously constructed solver and preconditioner */
-void STDCALLBULL FC_FUNC(solvehypre2,SOLVEHYPRE2)
+void STDCALLBULL FC_GLOBAL(solvehypre2,SOLVEHYPRE2)
  (
   int *nrows, int *globaldofs, int *owner,  double *xvec,
   double *rhsvec, int *Rounds, double *TOL,
@@ -1045,7 +1045,7 @@ void STDCALLBULL FC_FUNC(solvehypre2,SOLVEHYPRE2)
 */
 
 /* destroy HYPRE data structure stored in a fortran environment */
-void STDCALLBULL FC_FUNC(solvehypre4,SOLVEHYPRE4)(int** ContainerPtr) {
+void STDCALLBULL FC_GLOBAL(solvehypre4,SOLVEHYPRE4)(int** ContainerPtr) {
 
    ElmerHypreContainer* Container = (ElmerHypreContainer*)(*ContainerPtr);
 
@@ -1098,7 +1098,7 @@ void STDCALLBULL FC_FUNC(solvehypre4,SOLVEHYPRE4)(int** ContainerPtr) {
    *ContainerPtr = NULL;
 }
 
-void STDCALLBULL FC_FUNC(solvehypreams,SOLVEHYPREAMS)
+void STDCALLBULL FC_GLOBAL(solvehypreams,SOLVEHYPREAMS)
  (
   int *nrows,int *rows, int *cols, double *vals, int *nnodes,
   int *grows, int *gcols, double *gvals, int *perm,

@@ -1,6 +1,6 @@
 #include "sico2elmer.h"
 
-#include "../../config.h"
+#include "config.h"
 
 /*
   jv: added fortran function name and char ptr macros to (hopefully) enhance portability

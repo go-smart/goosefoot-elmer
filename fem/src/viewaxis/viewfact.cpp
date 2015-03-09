@@ -7,7 +7,8 @@
 #include <stdlib.h>
 
 #include "viewfact.h"
-#include "../../config.h"
+#include "config.h"
+#include "../../FC.h"
  
 static Real r1, r2, z1, z2;     /* Katseltavan pinnan koordinaatit */
 static Real r3, r4, z3, z4;     /* Katselevan pinnan koordinaatit */
@@ -26,7 +27,7 @@ static int *surfEltop, *surfEltopShade, * shadeParent;
 
 static int compact = 1, verify = 0, selfshading = 1;
 
-extern "C" void STDCALLBULL FC_FUNC(viewfactorsaxis,VIEWFACTORSAXIS) 
+extern "C" void STDCALLBULL FC_GLOBAL(viewfactorsaxis,VIEWFACTORSAXIS) 
   (int *n,int *surf, Real *crd, Real *vf, int *idiv, int *fast)
 {
   int i, j, ii, jj,div;

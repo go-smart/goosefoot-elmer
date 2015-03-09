@@ -41,6 +41,11 @@
 !>  Parallel solver utilities for *Solver - routines
 !------------------------------------------------------------------------------
 
+! *****************************************************************************/
+! *  23/10/09:
+! *  - Elmer 5.4.0 source file
+! *****************************************************************************/ 
+
 MODULE ParallelUtils
 
      USE SparIterSolve
@@ -56,8 +61,10 @@ CONTAINS
     TYPE (ParEnv_t), POINTER :: ParallelEnv
                                                                                                                                
 #ifdef PARALLEL_FOR_REAL
+    print *,"PARALLEL_FOR_REAL defined. Call ParCommInit()"
     ParallelEnv => ParCommInit( )
 #else
+    print *,"PARALLEL_FOR_REAL not defined."
     ParEnv % MyPE = 0
     ParEnv % PEs  = 1
     ParallelEnv => ParEnv

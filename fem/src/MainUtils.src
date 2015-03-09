@@ -96,7 +96,7 @@ CONTAINS
         CASE('banded' )
           
         CASE( 'umfpack', 'big umfpack' )
-#include "../config.h"
+#include "config.h"
 #ifndef HAVE_UMFPACK
           CALL Fatal( 'GetMatrixFormat', 'UMFPACK solver has not been installed.' )
 #endif

@@ -1,4 +1,4 @@
-INCLUDE_DIRECTORIES(include ../amd ../amd/include ${CMAKE_CURRENT_BINARY_DIR})
+INCLUDE_DIRECTORIES(include ../amd ../amd/include ${CMAKE_CURRENT_BINARY_DIR} ${PROJECT_BINARY_DIR}/umfpack)
 
 SET(UMFPACK_ORIG_SOURCES
 	umf_usolve.c
@@ -427,13 +427,14 @@ SET(UMFPACK_ODDITY_wsolve_FLAGS -DWSOLVE)
 SET(UMFPACK_INCLUDES -I${CMAKE_CURRENT_SOURCE_DIR}/include 
   -I${CMAKE_CURRENT_SOURCE_DIR}/../amd 
   -I${CMAKE_CURRENT_SOURCE_DIR}/../amd/include 
-  -I${PROJECT_BINARY_DIR} 
+  -I${PROJECT_BINARY_DIR}
+  -I${PROJECT_BINARY_DIR}/umfpack 
   -I${CMAKE_CURRENT_BINARY_DIR})
 
 FOREACH(outfileName ${UMFPACK_CPP_SOURCES})
-  STRING(REGEX REPLACE "^(umf|umfpack)_([a-z]*)_.*" "\\1" prefix "${outfileName}")
-  STRING(REGEX REPLACE "^(umf|umfpack)_([a-z]*)_.*" "\\2" umfModifier "${outfileName}")
-  STRING(REGEX REPLACE "^(umf|umfpack)_${umfModifier}_([a-zA-Z0-9_]*)\\.c" "\\2" stem "${outfileName}")
+  STRING(REGEX REPLACE "^(umf|umfpack|UMF)_([a-z]*)_.*" "\\1" prefix "${outfileName}")
+  STRING(REGEX REPLACE "^(umf|umfpack|UMF)_([a-z]*)_.*" "\\2" umfModifier "${outfileName}")
+  STRING(REGEX REPLACE "^(umf|umfpack|UMF)_${umfModifier}_([a-zA-Z0-9_]*)\\.c" "\\2" stem "${outfileName}")
   SET(infileName "${prefix}_${stem}.c")
 
   SET(flags ${UMFMODIFIER_${umfModifier}_FLAGS} -DNBLAS -E)

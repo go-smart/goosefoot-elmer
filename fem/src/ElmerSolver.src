@@ -87,13 +87,14 @@
 
      INTEGER(KIND=AddrInt) :: ControlProcedure
 
-     LOGICAL :: InitDirichlet, ExecThis
+     LOGICAL :: InitDirichlet, ExecThis, ControlMaxTemperature = .FALSE.
 
      TYPE(ElementType_t),POINTER :: elmt
 
      TYPE(ParEnv_t), POINTER :: ParallelEnv
 
-     CHARACTER(LEN=MAX_NAME_LEN) :: ModelName, eq, ExecCommand
+     CHARACTER(LEN=MAX_NAME_LEN) :: ModelName, eq, ExecCommand, FilePrefix, &
+         PVDFile, Dir, MaxTempFile
      CHARACTER(LEN=MAX_STRING_LEN) :: OutputFile, PostFile, RestartFile, &
                 OutputName=' ',PostName=' ', When, OptionString
 
@@ -108,6 +109,8 @@
 
      INTEGER :: iargc, NoArgs
 
+     INTEGER :: MaxTempUnit=59, TDOF
+
      INTEGER :: ExtrudeLevels
      TYPE(Mesh_t), POINTER :: ExtrudedMesh
 
@@ -115,9 +118,14 @@
 
 #ifdef HAVE_TRILINOS
 INTERFACE
-      SUBROUTINE TrilinosCleanup() BIND(C,name='TrilinosCleanup')
+      SUBROUTINE TrilinosEpetraCleanup() BIND(C,name='TrilinosEpetraCleanup')
       IMPLICIT NONE
-      END SUBROUTINE TrilinosCleanup
+      END SUBROUTINE TrilinosEpetraCleanup
+END INTERFACE
+INTERFACE
+      SUBROUTINE TrilinosKokkosCleanup() BIND(C,name='TrilinosKokkosCleanup')
+      IMPLICIT NONE
+      END SUBROUTINE TrilinosKokkosCleanup
 END INTERFACE
 #endif
 
@@ -136,7 +144,7 @@ END INTERFACE
      IF ( FirstTime ) THEN
        !
        ! Print banner to output:
-#include "../config.h"
+#include "config.h"
        ! -----------------------
        NoArgs = IARGC()
        ! Info Level is always true until the model has been read!
@@ -184,6 +192,9 @@ END INTERFACE
 #else
          )
 #endif
+         CALL Info( 'MAIN', '=============================================================')
+         CALL Info( 'MAIN', 'IMPPACT-RFA/GO-SMART :: NUMA adaptation - changes (c) 2007-  ')
+         CALL Info( 'MAIN', '=============================================================')
          IF ( ParEnv % PEs > 1 ) &
              CALL Info( 'MAIN', ' Running in parallel using ' // &
              TRIM(i2s(ParEnv % PEs)) // ' tasks.')
@@ -197,7 +208,8 @@ END INTERFACE
          CALL Info( 'MAIN', ' HYPRE library linked in.')
 #endif
 #ifdef HAVE_TRILINOS
-         CALL Info( 'MAIN', ' Trilinos library linked in.')
+         CALL Info( 'MAIN', ' TrilinosEpetra library linked in.')
+         CALL Info( 'MAIN', ' TrilinosKokkos library linked in.')
 #endif
 #ifdef HAVE_MUMPS
          CALL Info( 'MAIN', ' MUMPS library linked in.')
@@ -541,7 +553,8 @@ END INTERFACE
      IF ( Initialize <=0 ) CALL FreeModel(CurrentModel)
 
 #ifdef HAVE_TRILINOS
-  CALL TrilinosCleanup()
+  CALL TrilinosEpetraCleanup()
+  CALL TrilinosKokkosCleanup()
 #endif
 
      IF ( ParEnv % PEs>1 )  CALL ParallelFinalize()
@@ -557,6 +570,126 @@ END INTERFACE
               TRIM(Modelname) // '], can not execute.' )
 
    CONTAINS 
+
+
+!------------------------------------------------------------------------------
+     SUBROUTINE WriteMaxTempFile ( MaxTempFile, MaxTempUnit, FilePrefix, PEs, DOF )
+!------------------------------------------------------------------------------
+!******************************************************************************
+!
+!       Write a global max-temperature file from the partition-local ones
+!
+!       ARGUMENTS:
+!
+!       CHARACTER(LEN=*), INTENT(IN) :: MaxTempFile
+!               INPUT/OUTPUT: The max-temperature file to be filled
+!
+!       INTEGER :: MaxTempUnit
+!               INPUT: the identificator for WRITE routine
+! 
+!       CHARACTER(LEN=*), INTENT(IN) :: FilePrefix
+!               INPUT: the prefix name of the VTU/PVD files
+!
+!       INTEGER :: PEs 
+!               INPUT: the number of processus used to run the simulation
+!
+!       INTEGER :: DOF 
+!               INPUT: degrees of freedom of the temperature solution
+!
+!******************************************************************************   
+        USE DefUtils
+        !------------------------------------------------------------------------------
+        CHARACTER(LEN=*), INTENT(IN) :: MaxTempFile, FilePrefix
+        INTEGER :: MaxTempUnit, PEs, DOF 
+        !------------------------------------------------------------------------------
+        !Local variables
+        !------------------------------------------------------------------------------
+        INTEGER :: p,time_ind, nbtimestep, TimeSteps, stat
+        REAL(KIND=DP), ALLOCATABLE :: globalmaxtemp(:,:)
+        REAL(KIND=DP) :: vartime, temp1, temp2
+        CHARACTER(MAX_NAME_LEN) :: PartMaxTempFile, char_p,tmp_header
+        !------------------------------------------------------------------------------ 
+        ! Get the number of iterations in the simulation (used to allocate some variables):
+        !------------------------------------------------------------------------------         
+        TimeSteps = ListGetInteger(CurrentModel % Simulation,'Timestep intervals',GotIt)
+        !------------------------------------------------------------------------------
+        ! Allocations
+        !------------------------------------------------------------------------------ 
+        ALLOCATE( globalmaxtemp(TimeSteps,3),STAT=stat)
+
+        IF ( stat /= 0 ) CALL Fatal( 'ElmerSolver', 'Memory allocation error' )
+        !------------------------------------------------------------------------------
+        ! Write the global max-temperature file header
+        !------------------------------------------------------------------------------                 
+        WRITE(MaxTempUnit,'(A)', ADVANCE='no') 'Time   '
+        WRITE(MaxTempUnit,'(A)', ADVANCE='no') 'Blood Temperature   '
+        WRITE(MaxTempUnit,'(A)', ADVANCE='yes') 'Tissue Temperature   '
+        !------------------------------------------------------------------------------
+        ! Read the part max-temperature files and compute the global max:
+        !------------------------------------------------------------------------------
+        globalmaxtemp = 0.0D0   
+        !------------------------------------------------------------------------------
+        ! Go through the part files:
+        !------------------------------------------------------------------------------
+        DO p=1,PEs
+        !------------------------------------------------------------------------------
+                WRITE(char_p,*) p-1
+                char_p = ADJUSTL(char_p)
+                PartMaxTempFile = 'maxtemp'//'_'//TRIM(FilePrefix)//'_'//TRIM(char_p)//'.dat'
+
+                OPEN(UNIT=p,FILE=PartMaxTempFile)
+                !------------------------------------------------------------------------------
+                time_ind = 1
+                READ(p,'(A,A,A)',IOSTAT=stat), tmp_header
+                !------------------------------------------------------------------------------
+                ! Go through the time steps:
+                !------------------------------------------------------------------------------
+                DO
+                !------------------------------------------------------------------------------
+                        temp1 = 0.0
+                        temp2 = 0.0
+                        IF (DOF == 1) THEN                      
+                                READ(p,*,IOSTAT=stat), vartime, temp1
+                        ELSE
+                                READ(p,*,IOSTAT=stat), vartime, temp1, temp2
+                        END IF
+                        IF(stat<0) EXIT
+
+                        globalmaxtemp(time_ind,1) = vartime
+                        !------------------------------------------------------------------------------
+                        ! Compute the global max 
+                        !------------------------------------------------------------------------------
+                        IF (temp1 > globalmaxtemp(time_ind,2)) THEN
+                                globalmaxtemp(time_ind,2) = temp1                       
+                        END IF
+                        IF (temp2 > globalmaxtemp(time_ind,3)) THEN
+                                globalmaxtemp(time_ind,3) = temp2               
+                        END IF
+                        
+                        time_ind = time_ind + 1
+                !------------------------------------------------------------------------------
+                END DO
+                !------------------------------------------------------------------------------
+                CLOSE(UNIT=p)
+        !------------------------------------------------------------------------------
+        END DO
+        !------------------------------------------------------------------------------
+        nbtimestep = MIN(time_ind - 1,TimeSteps)
+        !------------------------------------------------------------------------------
+        ! Write the max-temperature in the global file:
+        !------------------------------------------------------------------------------
+        DO time_ind = 1,nbtimestep 
+                WRITE( MaxTempUnit,'(F13.4)', ADVANCE='no') globalmaxtemp(time_ind,1)           
+                WRITE( MaxTempUnit,'(F13.4)', ADVANCE='no') globalmaxtemp(time_ind,2)
+                WRITE( MaxTempUnit,'(F13.4)', ADVANCE='yes') globalmaxtemp(time_ind,3)
+        END DO
+        !------------------------------------------------------------------------------
+        ! De-allocation
+        !------------------------------------------------------------------------------
+        DEALLOCATE(globalmaxtemp)
+!------------------------------------------------------------------------------
+     END SUBROUTINE WriteMaxTempFile 
+!------------------------------------------------------------------------------
      
 
      ! This is a dirty hack that adds an instance of ResultOutputSolver to the list of Solvers.

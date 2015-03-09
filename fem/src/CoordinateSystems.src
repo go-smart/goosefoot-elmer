@@ -52,6 +52,7 @@ MODULE CoordinateSystems
   INTEGER, PARAMETER :: Polar = 5
   INTEGER :: Coordinates = Cartesian
 
+
 !----------------------------------------------------------------------------
 CONTAINS
 !----------------------------------------------------------------------------
@@ -279,11 +280,16 @@ CONTAINS
 
 
 !----------------------------------------------------------------------------
-  FUNCTION CoordinateSystemDimension() RESULT( dim )
+  FUNCTION CoordinateSystemDimension(Mesh) RESULT( dim )
     INTEGER :: dim ! ,csys
+    TYPE(Mesh_t), OPTIONAL :: Mesh
 
 !   csys = CurrentCoordinateSystem()
-    dim  = CurrentModel % Dimension
+    IF (PRESENT(Mesh)) THEN
+      dim = Mesh % MeshDim
+    ELSE
+      dim  = CurrentModel % Dimension
+    END IF
   END FUNCTION CoordinateSystemDimension
 !----------------------------------------------------------------------------
 

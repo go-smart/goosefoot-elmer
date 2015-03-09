@@ -10162,7 +10162,7 @@ END SUBROUTINE GetMaxDefs
 
 !------------------------------------------------------------------------------
 
-     SELECT CASE( CoordinateSystemDimension() )
+     SELECT CASE( CoordinateSystemDimension(Mesh) )
         CASE(2)
           IF ( .NOT.ASSOCIATED( Mesh % Edges ) ) CALL FindMeshEdges2D( Mesh )
         CASE(3)
@@ -11092,7 +11092,7 @@ CONTAINS
   END IF
 
 
-  DIM = CoordinateSystemDimension()
+  DIM = CoordinateSystemDimension(Mesh)
   N = Mesh % MaxElementNodes
 
   CALL AllocateVector( ElementNodes % x, n )
@@ -12756,7 +12756,7 @@ CONTAINS
 
        ! New version based on edges and faces (2. March 2007):
        !=====================================================
-       SELECT CASE( CoordinateSystemDimension() )
+       SELECT CASE( CoordinateSystemDimension(Mesh) )
           
        CASE(2)
           !

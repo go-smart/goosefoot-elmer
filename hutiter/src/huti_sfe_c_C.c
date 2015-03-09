@@ -44,7 +44,7 @@
 #include  <stdlib.h> 
 #include  <stdio.h> 
 #include  "huti_defs.h" 
-#include  "../config.h" 
+#include  "config.h" 
 
 extern void FC_FUNC_(huti_ccgsolv, HUTI_CCGSOLV) ( int *ndim, int *wrkdim,
 			void *xvec, void *rhsvec, int *ipar, double *dpar,

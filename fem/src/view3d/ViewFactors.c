@@ -55,7 +55,8 @@ Juha Ruokolainen/CSC - 24 Aug 1995
 ******************************************************************************/
 
 #include <ViewFactors.h>
-#include "../../config.h"
+#include "config.h"
+#include "../../FC.h"
 
 #if defined(WIN32) || defined(MINGW32) 
 double drand48()
@@ -451,7 +452,7 @@ void InitGeometryTypes()
 }
 
 
-void STDCALLBULL FC_FUNC(viewfactors3d,VIEWFACTORS3D)
+void STDCALLBULL FC_GLOBAL(viewfactors3d,VIEWFACTORS3D)
   ( int *EL_N,  int *EL_Topo, int *EL_Type, double *EL_Coord, double *EL_Normals,
     int *RT_N0, int *RT_Topo0, int *RT_Type, double *RT_Coord, double *RT_Normals,
     double *Factors, double *Feps, double *Aeps, double *Reps, int *Nr, 

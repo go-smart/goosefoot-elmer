@@ -50,7 +50,7 @@
 #include <math.h>
 #include <float.h>
 #include <limits.h>
-#include "../../config.h"
+#include "config.h"
 
 #ifdef WIN32
 double drand48();

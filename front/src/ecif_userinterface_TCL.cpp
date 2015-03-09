@@ -30,7 +30,7 @@ Abstract:   Implementation
 
 ************************************************************************/
 
-#include "../config.h"
+#include "config.h"
 
 #if defined(WIN32)
   #include <direct.h>

@@ -1033,7 +1033,7 @@ CONTAINS
 !         Priority is in ELMER_LIB, ELMER_HOME, and finally, if all else fails
 !         use the compilation time prefix.
 !         ------------------------------------------------------
-#include "../config.h"
+#include "config.h"
 
           str(1:10) = 'ELMER_LIB'//CHAR(0)
           CALL envir( str,str1,k ) 
@@ -1852,6 +1852,7 @@ CONTAINS
          WRITE( Message, * ) 'Unknown global coordinate system: ', TRIM(csys)
          CALL Fatal( 'SetCoordinateSystem', Message )
      END SELECT
+
 !------------------------------------------------------------------------------
    END SUBROUTINE SetCoordinateSystem
 !------------------------------------------------------------------------------
@@ -2011,6 +2012,7 @@ CONTAINS
          MeshDir = "." // CHAR(0)
       END IF
       MeshName(i:i) = CHAR(0)
+
     END IF
 
     NULLIFY( Model % Meshes )
@@ -2288,6 +2290,8 @@ CONTAINS
         ELSE
           Model % Meshes => Model % Solvers(s) % Mesh
         END IF
+
+        Model % Solvers(s) % CylindricSymmetric = ListGetLogical( Solver % Values, 'Cylindric Symmetric', GotIt )
       END IF
     END DO
 

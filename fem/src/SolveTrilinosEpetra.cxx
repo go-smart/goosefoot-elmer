@@ -1,26 +1,26 @@
-/* interface to Trilinos
+/* interface to TrilinosEpetra
 
 This interface can in principal be used both in parallel and serially,
 but currently it is only called in SParIterSolver.
 It is compiled into Elmer by adding -DHAVE_TRILINOS
-and linking with the Trilinos libraries. We currently
+and linking with the TrilinosEpetra libraries. We currently
 allow creating an iterative solver (from the Belos library)
 and a preconditioner (ifpack or ML). To use a direct solver,
 set "Ifpack Method" to "Amesos" and "Iterative Solver" to "None".
 
-Older versions (below 10.10) of Trilinos demand a different call 
+Older versions (below 10.10) of TrilinosEpetra demand a different call 
 of the XML input file. This can be force by -DOLD_TRILINOS in the
 CXXFLAGS 
 
 To activate these linear solvers, set
-'Linear System Use Trilinos' = Logical True
-'Trilinos Input File' = String <xml filename>
+'Linear System Use TrilinosEpetra' = Logical True
+'TrilinosEpetra Input File' = String <xml filename>
 
 see elmerfem/fem/examples/trilinos for an example.
 
 */
 
-#include "../config.h"
+#include "config.h"
 
 
 #ifdef HAVE_TRILINOS
@@ -38,10 +38,10 @@ see elmerfem/fem/examples/trilinos for an example.
 //#define DUMP_IN_TRILINOS_INTERFACE
 
 #define CHECK_ZERO(funcall) {ierr = funcall;\
-if (ierr) {std::cout<<"Trilinos Error "<<ierr<<" returned from call "<<#funcall<<std::endl; return;}}
+if (ierr) {std::cout<<"TrilinosEpetra Error "<<ierr<<" returned from call "<<#funcall<<std::endl; return;}}
 
 #define FCHECK_ZERO(funcall) {ierr = funcall;\
-if (ierr) {std::cout<<"Trilinos Error "<<ierr<<" returned from call "<<#funcall<<std::endl; return Teuchos::null;}}
+if (ierr) {std::cout<<"TrilinosEpetra Error "<<ierr<<" returned from call "<<#funcall<<std::endl; return Teuchos::null;}}
 
 #define ERROR(msg,file,line)  {std::cerr << "Error in file "<<file<<", line "<<line<<":"<<std::endl; \
   std::cerr << msg << std::endl; \
@@ -120,12 +120,12 @@ class MemTest
   {
   public:
   
-  MemTest() {std::cerr <<  "Elmer Trilinos container constructed"<<std::endl;}
-  ~MemTest() {std::cerr << "Elmer Trilinos container destroyed"<<std::endl;}
+  MemTest() {std::cerr <<  "Elmer TrilinosEpetra container constructed"<<std::endl;}
+  ~MemTest() {std::cerr << "Elmer TrilinosEpetra container destroyed"<<std::endl;}
   };
 #endif
 
-typedef struct ElmerTrilinosContainer {
+typedef struct ElmerTrilinosEpetraContainer {
 
 Teuchos::RCP<Epetra_Comm> comm_;
 Teuchos::RCP<Epetra_Map> assemblyMap_; // map with 'overlap' of nodes
@@ -144,47 +144,47 @@ Teuchos::RCP<Teuchos::ParameterList> params_;
 Teuchos::RCP<Epetra_Operator> prec_;
 Teuchos::RCP<Belos::SolverManager<ST,MV,OP> > solver_;
 
-Teuchos::RCP<struct ElmerTrilinosContainer> previous_;
-Teuchos::RCP<struct ElmerTrilinosContainer> next_;
+Teuchos::RCP<struct ElmerTrilinosEpetraContainer> previous_;
+Teuchos::RCP<struct ElmerTrilinosEpetraContainer> next_;
 
 #ifdef DEBUG_TRILINOS_INTERFACE
 Teuchos::RCP<MemTest> memtest_;
 #endif
-} ElmerTrilinosContainer;
+} ElmerTrilinosEpetraContainer;
 
 // to avoid warnings from RCP's in debug mode when 
 // temporarily returning the control to Fortran,   
 // we store an extern pointer to a (doubly) linked 
 // list of all 'Container' objects here
-static Teuchos::RCP<ElmerTrilinosContainer> containerListHead=Teuchos::null;
+static Teuchos::RCP<ElmerTrilinosEpetraContainer> containerListHead=Teuchos::null;
 
 
 
 // some auxiliary functions implemented below:
 
 // creates the map without overlap
-Teuchos::RCP<Epetra_Map> createSolveMap
+Teuchos::RCP<Epetra_Map> ElmerTrilinosEpetra_createSolveMap
         (Teuchos::RCP<Epetra_Comm> comm,
         int n, int* GID, int* owner);
 
 // creates the matrix with overlap (e.g. shared nodes)
-Teuchos::RCP<Epetra_CrsMatrix> createMatrix
+Teuchos::RCP<Epetra_CrsMatrix> ElmerTrilinosEpetra_createMatrix
         (Teuchos::RCP<Epetra_Map> assemblyMap,
         int *rows, int *cols, double* vals);
 
-Teuchos::RCP<Epetra_Operator> createPreconditioner(
+Teuchos::RCP<Epetra_Operator> ElmerTrilinosEpetra_createPreconditioner(
         Teuchos::RCP<Epetra_CrsMatrix> A,
         Teuchos::ParameterList& params,
         Teuchos::RCP<Epetra_MultiVector> coords);
 
-Teuchos::RCP<Epetra_Operator> createIfpackPreconditioner(
+Teuchos::RCP<Epetra_Operator> ElmerTrilinosEpetra_createIfpackPreconditioner(
         Teuchos::RCP<Epetra_CrsMatrix> A, Teuchos::ParameterList& params);
 
-Teuchos::RCP<Epetra_Operator> createMLPreconditioner(
+Teuchos::RCP<Epetra_Operator> ElmerTrilinosEpetra_createMLPreconditioner(
         Teuchos::RCP<Epetra_CrsMatrix> A, Teuchos::ParameterList& params,
         Teuchos::RCP<Epetra_MultiVector> coords);
 
-Teuchos::RCP<Belos::SolverManager<ST,MV,OP> > createSolver
+Teuchos::RCP<Belos::SolverManager<ST,MV,OP> > ElmerTrilinosEpetra_createSolver
         (Teuchos::RCP<OP> A, Teuchos::RCP<OP> P,
         Teuchos::RCP<MV> x, Teuchos::RCP<MV> b,
         Teuchos::ParameterList& params);
@@ -197,12 +197,12 @@ static bool am_printer = true; // for output
 extern "C" {
 
 
-// the calling order of SolveTrilinos1..4 is the same as for SolveHYPRE1..4
+// the calling order of SolveTrilinosEpetra1..4 is the same as for SolveHYPRE1..4
 
 // construct matrix, solver and preconditioner
 // nrows - number of local rows
 // ncols - number of column indices on local partition
-void SolveTrilinos1
+void SolveTrilinosEpetra1
  (
   int *n, int *nnz,
   int *rows, int *cols, double *vals,
@@ -220,12 +220,12 @@ void SolveTrilinos1
    ierr=0;
    bool success=true;
 
-   OUT("starting Trilinos setup");
+   OUT("starting TrilinosEpetra setup");
    
    // Elmer has the unpleasant habit of finalizing MPI
    // if only one process is involved, this has to be 
    // changed in the source code if we want to use 
-   // Trilinos for sequential runs as well. Check to make sure:
+   // TrilinosEpetra for sequential runs as well. Check to make sure:
    int mpi_state;
    MPI_Initialized(&mpi_state);
    if (mpi_state==0)
@@ -289,7 +289,7 @@ CHECK_ZERO(EpetraExt::BlockMapToMatrixMarketFile("ElmerMap.txt",*assemblyMap));
    Teuchos::RCP<Epetra_CrsMatrix> A_elmer;
    try {
    A_elmer = 
-        createMatrix(assemblyMap, rows, cols, vals);
+        ElmerTrilinosEpetra_createMatrix(assemblyMap, rows, cols, vals);
    } TEUCHOS_STANDARD_CATCH_STATEMENTS(true,std::cerr,success)
 
    if (!success || A_elmer==Teuchos::null)
@@ -306,7 +306,7 @@ CHECK_ZERO(EpetraExt::BlockMapToMatrixMarketFile("ElmerMap.txt",*assemblyMap));
    // now construct a map with each node owned by one partition (a solver-map)
    Teuchos::RCP<Epetra_Map> solveMap;
    try {   
-    solveMap = createSolveMap(comm,*n,globaldof,owner);
+    solveMap = ElmerTrilinosEpetra_createSolveMap(comm,*n,globaldof,owner);
    } TEUCHOS_STANDARD_CATCH_STATEMENTS(true,std::cerr,success)
 
    if (!success || solveMap==Teuchos::null)
@@ -317,7 +317,7 @@ CHECK_ZERO(EpetraExt::BlockMapToMatrixMarketFile("ElmerMap.txt",*assemblyMap));
      }
 
 #ifdef DUMP_IN_TRILINOS_INTERFACE 
-CHECK_ZERO(EpetraExt::BlockMapToMatrixMarketFile("TrilinosMap.txt",*solveMap));
+CHECK_ZERO(EpetraExt::BlockMapToMatrixMarketFile("TrilinosEpetraMap.txt",*solveMap));
 #endif
 
    Teuchos::RCP<Epetra_Export> exporter;
@@ -369,7 +369,7 @@ try {
    std::string filename(xmlfile);
    if (filename=="none")
      {
-     WARNING("no parameter file specified, using default settings in Trilinos",__FILE__,__LINE__);
+     WARNING("no parameter file specified, using default settings in TrilinosEpetra",__FILE__,__LINE__);
      }
    else
      {
@@ -378,13 +378,13 @@ try {
 #ifdef OLD_TRILINOS
        Teuchos::updateParametersFromXmlFile(filename,params.get());
 #else
-// for Trilinos 10.10 and later     
+// for TrilinosEpetra 10.10 and later     
        Teuchos::updateParametersFromXmlFile(filename,params.ptr());
 #endif       
        } TEUCHOS_STANDARD_CATCH_STATEMENTS(true,std::cerr,success);
        if (!success)
          {
-         WARNING("failed to read your Trilinos input file, using default values",
+         WARNING("failed to read your TrilinosEpetra input file, using default values",
                 __FILE__,__LINE__);
          ierr = 1;
          }
@@ -396,7 +396,7 @@ try {
    {
 #if 1
 //#ifdef DEBUG_TRILINOS_INTERFACE
-   std::string filename = params->get("Filename Base","Trilinos")+"Matrix.mtx";
+   std::string filename = params->get("Filename Base","TrilinosEpetra")+"Matrix.mtx";
    CHECK_ZERO(EpetraExt::RowMatrixToMatrixMarketFile(filename.c_str(),*A));
 #else
    WARNING("you have specified 'Dump Matrix', but DEBUG_TRILINOS_INTERFACE is not defined",
@@ -409,6 +409,8 @@ try {
 
    Teuchos::RCP<Epetra_MultiVector> coords0=Teuchos::rcp(new Epetra_MultiVector(*assemblyMap,3));
    Teuchos::RCP<Epetra_MultiVector> coords=Teuchos::rcp(new Epetra_MultiVector(*solveMap,3));
+   std::cout << coords->MyLength() << "@@" << coords->GlobalLength() << std::endl;
+   std::cout << coords0->MyLength() << "@@" << coords0->GlobalLength() << std::endl;
    
    int k = *num_nodes;
    int dof = (int)(assemblyMap->NumMyElements()/k);
@@ -444,19 +446,19 @@ try {
   ///////////////////////////////////////////////////////////////////
   // create/setup preconditioner                                   //
   ///////////////////////////////////////////////////////////////////
-  Teuchos::RCP<Epetra_Operator> prec = createPreconditioner(A, *params, coords);
+  Teuchos::RCP<Epetra_Operator> prec = ElmerTrilinosEpetra_createPreconditioner(A, *params, coords);
 
   //////////////////////////////////////////////////////////////
   // Krylov subspace method setup (Belos)                     //
   //////////////////////////////////////////////////////////////
-  Teuchos::RCP<Belos::SolverManager<ST,MV,OP> > solver = createSolver(A,prec,
+  Teuchos::RCP<Belos::SolverManager<ST,MV,OP> > solver = ElmerTrilinosEpetra_createSolver(A,prec,
         sol, rhs, *params);
 
   // print parameter list so we can see default values
   // and if some of our input is unused.
   if (am_printer && verbose>=5)
     {
-    std::cout << "Trilinos parameter list: "<<std::endl;
+    std::cout << "TrilinosEpetra parameter list: "<<std::endl;
     std::cout << *params<<std::endl;
     }
 
@@ -466,12 +468,12 @@ try {
    //////////////////////////////////////////////////////////////
    if (*ContainerPtr != 0)
      {
-     WARNING("pointer passed into SolveTrilinos1 not NULL, possible memory leak.",
+     WARNING("pointer passed into SolveTrilinosEpetra1 not NULL, possible memory leak.",
         __FILE__,__LINE__);
      }
 
-   Teuchos::RCP<ElmerTrilinosContainer> Container = 
-        Teuchos::rcp(new ElmerTrilinosContainer());
+   Teuchos::RCP<ElmerTrilinosEpetraContainer> Container = 
+        Teuchos::rcp(new ElmerTrilinosEpetraContainer());
 
    *ContainerPtr=(int*)(Container.get());
    
@@ -510,7 +512,7 @@ try {
   }
 ////////////////////////////////////////////////////////////
 
-void SolveTrilinos2
+void SolveTrilinosEpetra2
  (
   int *n, double *xvec, double *rhsvec, int *Rounds, double *TOL,
   int *verbosityPtr, int** ContainerPtr,
@@ -522,12 +524,12 @@ void SolveTrilinos2
    ierr=0;
    bool success=true;
 
-ElmerTrilinosContainer* Container = (ElmerTrilinosContainer*)(*ContainerPtr);
-if (Container==NULL) ERROR("invalid pointer passed to SolveTrilinos2",__FILE__,__LINE__);
+ElmerTrilinosEpetraContainer* Container = (ElmerTrilinosEpetraContainer*)(*ContainerPtr);
+if (Container==NULL) ERROR("invalid pointer passed to SolveTrilinosEpetra2",__FILE__,__LINE__);
 
    am_printer = (Container->comm_->MyPID()==0)&&(verbose>PRINTLEVEL);
    
-   // get the data structures built in SolveTrilinos1():
+   // get the data structures built in SolveTrilinosEpetra1():
    Teuchos::RCP<Epetra_Map> assemblyMap = Container->assemblyMap_;
    Teuchos::RCP<Epetra_Map> solveMap = Container->solveMap_;
    Teuchos::RCP<Epetra_Export> exporter = Container->exporter_;
@@ -541,7 +543,7 @@ if (Container==NULL) ERROR("invalid pointer passed to SolveTrilinos2",__FILE__,_
 
    // import the vectors
    Epetra_Vector bview(View, *assemblyMap, rhsvec);
-   CHECK_ZERO(b->Export(bview, *exporter, Add));
+   CHECK_ZERO(b->Export(bview, *exporter, Zero));
 
    // import the vectors
    Epetra_Vector xview(View, *assemblyMap, xvec);
@@ -551,6 +553,16 @@ if (Container==NULL) ERROR("invalid pointer passed to SolveTrilinos2",__FILE__,_
      { 
      CHECK_ZERO(b->Scale(scaleFactor));
      }
+   std::cout << scaleFactor << std::endl;
+
+   std::cout << "A norm : " << A->NormFrobenius() << std::endl;
+   double bviewnorm, bnorm;
+   bview.NormInf(&bviewnorm);
+   std::cout << "bview norm : " << bviewnorm << std::endl;
+   b->NormInf(&bnorm);
+   std::cout << "b norm : " << bnorm << std::endl;
+    xview.NormInf(&bviewnorm);
+   std::cout << "xv norm : " << bviewnorm << std::endl;
 
    // override the settings for tconv tol and num iter using Elmer inut data:
    if (*TOL>=0.0) params->sublist("Belos").set("Convergence Tolerance",*TOL);
@@ -578,7 +590,7 @@ if (Container==NULL) ERROR("invalid pointer passed to SolveTrilinos2",__FILE__,_
   
   if (converged)
     {
-    OUT("initial solution passed to Trilinos is already good enough - returning to Elmer.");
+    OUT("initial solution passed to TrilinosEpetra is already good enough - returning to Elmer.");
     return;
     }
 #else
@@ -603,7 +615,7 @@ if (Container==NULL) ERROR("invalid pointer passed to SolveTrilinos2",__FILE__,_
 
 if (!success) 
   {
-  WARNING("Trilinos solve failed!",__FILE__,__LINE__);
+  WARNING("TrilinosEpetra solve failed!",__FILE__,__LINE__);
   ierr=-1; // caught an exception -> error
   return;
   }
@@ -639,7 +651,7 @@ if (!success)
    if (print_vectors)
    {
 #ifdef DEBUG_TRILINOS_INTERFACE   
-   string filebase = params->get("Filename Base","Trilinos");
+   string filebase = params->get("Filename Base","TrilinosEpetra");
    EpetraExt::MultiVectorToMatrixMarketFile((filebase+"Rhs.txt").c_str(),*b);
    EpetraExt::MultiVectorToMatrixMarketFile((filebase+"Sol.txt").c_str(),*x);
 #else
@@ -687,8 +699,12 @@ if (!success)
 
    // import the vectors
    CHECK_ZERO(xview.Import(*x, *exporter, Zero));
+        x->NormInf(&bviewnorm);
+   std::cout << "xv norm : " << bviewnorm << std::endl;
+    xview.NormInf(&bviewnorm);
+   std::cout << "xv norm : " << bviewnorm << std::endl;
 
-// Trilinos cleans up itself (because of RCP's)
+// TrilinosEpetra cleans up itself (because of RCP's)
 return;
 }
 
@@ -696,13 +712,13 @@ return;
 // destructor                                             //
 ////////////////////////////////////////////////////////////
 
-void SolveTrilinos4(int** ContainerPtr)
+void SolveTrilinosEpetra4(int** ContainerPtr)
   {
-  ElmerTrilinosContainer* Container = 
-        (ElmerTrilinosContainer*)(*ContainerPtr);
+  ElmerTrilinosEpetraContainer* Container = 
+        (ElmerTrilinosEpetraContainer*)(*ContainerPtr);
 
 #ifdef DEBUG_TRILINOS_INTERFACE  
-std::cerr << "PID "<<Container->comm_->MyPID()<<": destroy Trilinos object "<<std::endl;
+std::cerr << "PID "<<Container->comm_->MyPID()<<": destroy TrilinosEpetra object "<<std::endl;
 #endif
 
   // remove this container from the list
@@ -734,15 +750,15 @@ std::cerr << "PID "<<Container->comm_->MyPID()<<": destroy Trilinos object "<<st
   MPI_Barrier(MPI_COMM_WORLD);
   }                                                                                                                                         
 
-// this function deletes ALL Trilinos objects created by Elmer that     
-// have not been destroyed properly, yet (by SolveTrilinos4).           
+// this function deletes ALL TrilinosEpetra objects created by Elmer that     
+// have not been destroyed properly, yet (by SolveTrilinosEpetra4).           
 // It should only be called at the very end of an Elmer run.            
-void TrilinosCleanup(void)
+void TrilinosEpetraCleanup(void)
   {
 #ifdef DEBUG_TRILINOS_INTERFACE  
-  std::cout << "Destroying all remaining Trilinos objects..."<<std::endl;
+  std::cout << "Destroying all remaining TrilinosEpetra objects..."<<std::endl;
 #endif
-  Teuchos::RCP<struct ElmerTrilinosContainer> c = containerListHead;
+  Teuchos::RCP<struct ElmerTrilinosEpetraContainer> c = containerListHead;
   while (c!=Teuchos::null)
     {
     c=c->next_;
@@ -754,7 +770,7 @@ void TrilinosCleanup(void)
 }//extern "C"
 
 // creates the map without overlap
-Teuchos::RCP<Epetra_Map> createSolveMap
+Teuchos::RCP<Epetra_Map> ElmerTrilinosEpetra_createSolveMap
         (Teuchos::RCP<Epetra_Comm> comm,
         int n, int* GID, int* owner)
   {
@@ -782,7 +798,7 @@ Teuchos::RCP<Epetra_Map> createSolveMap
   }
 
 // creates the matrix with overlap (e.g. shared nodes)
-Teuchos::RCP<Epetra_CrsMatrix> createMatrix
+Teuchos::RCP<Epetra_CrsMatrix> ElmerTrilinosEpetra_createMatrix
         (Teuchos::RCP<Epetra_Map> assemblyMap,
         int *rows, int *cols, double* vals)
   {
@@ -792,7 +808,7 @@ Teuchos::RCP<Epetra_CrsMatrix> createMatrix
   
   if (assemblyMap==Teuchos::null)
     {
-    FERROR("map passed to createMatrix is null",__FILE__,__LINE__);
+    FERROR("map passed to ElmerTrilinosEpetra_createMatrix is null",__FILE__,__LINE__);
     }
   
   int nrows = assemblyMap->NumMyElements();
@@ -828,22 +844,22 @@ Teuchos::RCP<Epetra_CrsMatrix> createMatrix
   }
 
 
-Teuchos::RCP<Epetra_Operator> createPreconditioner(
+Teuchos::RCP<Epetra_Operator> ElmerTrilinosEpetra_createPreconditioner(
         Teuchos::RCP<Epetra_CrsMatrix> A, 
         Teuchos::ParameterList& params,
         Teuchos::RCP<Epetra_MultiVector> coords)
         {
         std::string type="None";
         type=params.get("Preconditioner",type);
-        if (type=="Ifpack") return createIfpackPreconditioner(A,params);
-        if (type=="ML") return createMLPreconditioner(A,params,coords);
+        if (type=="Ifpack") return ElmerTrilinosEpetra_createIfpackPreconditioner(A,params);
+        if (type=="ML") return ElmerTrilinosEpetra_createMLPreconditioner(A,params,coords);
         if (type=="None") return Teuchos::null;
         WARNING("invalid 'Preconditioner', returning null",__FILE__,__LINE__);
         return Teuchos::null;
         }
 
 
-Teuchos::RCP<Epetra_Operator> createIfpackPreconditioner(
+Teuchos::RCP<Epetra_Operator> ElmerTrilinosEpetra_createIfpackPreconditioner(
         Teuchos::RCP<Epetra_CrsMatrix> A,
         Teuchos::ParameterList& params)
   {
@@ -885,7 +901,7 @@ Teuchos::RCP<Epetra_Operator> createIfpackPreconditioner(
   return prec;
   }
 
-Teuchos::RCP<Epetra_Operator> createMLPreconditioner(
+Teuchos::RCP<Epetra_Operator> ElmerTrilinosEpetra_createMLPreconditioner(
         Teuchos::RCP<Epetra_CrsMatrix> A,
         Teuchos::ParameterList& params,
         Teuchos::RCP<Epetra_MultiVector> coords)
@@ -986,7 +1002,7 @@ Teuchos::RCP<Epetra_Operator> createMLPreconditioner(
                                                                                   
 // create an iterative solver for the linear system Ax=b,
 // preconditioned by P.
-Teuchos::RCP<Belos::SolverManager<ST,MV,OP> > createSolver
+Teuchos::RCP<Belos::SolverManager<ST,MV,OP> > ElmerTrilinosEpetra_createSolver
         (Teuchos::RCP<OP> A, Teuchos::RCP<OP> P,
          Teuchos::RCP<MV> x, Teuchos::RCP<MV> b,
          Teuchos::ParameterList& params)
@@ -1088,7 +1104,7 @@ Teuchos::RCP<Belos::SolverManager<ST,MV,OP> > createSolver
   return belosSolverPtr;
   }
 
-void TrilinosSetNodeCoords(int* num_nodes, double* x, double* y, double* z)
+void TrilinosEpetraSetNodeCoords(int* num_nodes, double* x, double* y, double* z)
   {
   }
 

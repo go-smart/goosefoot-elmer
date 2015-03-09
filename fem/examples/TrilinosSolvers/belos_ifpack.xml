@@ -10,7 +10,11 @@
     <Parameter name="Maximum Iterations" type="int" value="500"/>
     <Parameter name="Block Size" type="int" value="1"/>
     <Parameter name="Maximum Restarts" type="int" value="0"/>
-    <Parameter name="Convergence Tolerance" type="double" value="1.0e-10"/>
+<<<<<<< HEAD
+    <Parameter name="Convergence Tolerance" type="float" value="1.0e-10"/>
+=======
+    <Parameter name="Convergence Tolerance" type="float" value="1.0e-4"/>
+>>>>>>> c7b71db77d1a14cba9ae695d4c14e4d0d1a987c4
     <Parameter name="Output Frequency" type="int" value="1"/>
     <Parameter name="Show Maximum Residual Norm Only" type="bool" value="1"/>
   </ParameterList>
@@ -23,7 +27,7 @@
   <Parameter name="Ifpack Overlap" type="int" value="1"/>
 
   <ParameterList name="Ifpack">
-    <Parameter name="fact: level-of-fill" type="int" value="0"/>  
+      <!--<Parameter name="fact: level-of-fill" type="int" value="0"/>  -->
   </ParameterList>   
 
 </ParameterList><!--}-->

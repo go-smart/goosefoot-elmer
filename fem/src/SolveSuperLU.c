@@ -8,7 +8,7 @@
  */
 
 
-#include "../config.h"
+#include "config.h"
 #ifdef HAVE_SUPERLU
 
 // #include "slu_ddefs.h"
@@ -27,7 +27,7 @@ typedef struct {
 } factors_t;
 
 void
-FC_FUNC_(solve_superlu,SOLVE_SUPERLU)(int *iopt, int *nprocs, int *n, 
+FC_GLOBAL_(solve_superlu,SOLVE_SUPERLU)(int *iopt, int *nprocs, int *n, 
   int *nnz, int *nrhs, double *values, int *rowind, int *colptr,
       double *b, int *ldb, fptr *f_factors, int *info)
 

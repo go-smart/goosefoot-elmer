@@ -309,7 +309,7 @@ CONTAINS
     REAL(KIND=dp), POINTER CONTIG :: Values(:)
     INTEGER, POINTER CONTIG :: Rows(:), Cols(:), Diag(:)
 
-#include "../config.h"
+#include "config.h"
 #ifdef HAVE_UMFPACK
   INTERFACE
     SUBROUTINE umf4def( control )
@@ -625,6 +625,7 @@ CONTAINS
   TYPE(Matrix_t) :: A
   TYPE(Solver_t) :: Solver
   REAL(KIND=dp), TARGET :: x(*), b(*)
+
 
 #ifdef HAVE_MUMPS
   INCLUDE 'mpif.h'

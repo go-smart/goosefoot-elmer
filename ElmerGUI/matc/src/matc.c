@@ -97,7 +97,7 @@ $  usage of the function and type of the parameters
 #define MODULE_MATC
 #include "elmer/matc.h"
 #include "str.h"
-#include "../config.h"
+#include "config.h"
 
 #ifdef DEBUG
       static FILE *fplog;

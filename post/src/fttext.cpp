@@ -10,7 +10,7 @@
 // Date:        15. Jan 2008
 //-----------------------------------------------------------------------------------
 #if defined(HAVE_CONFIG_H)
-#include "../config.h"
+#include "config.h"
 #endif
 
 #if defined(HAVE_FTGL_NEW) || defined(HAVE_FTGL_OLD)

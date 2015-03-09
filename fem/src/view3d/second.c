@@ -44,7 +44,7 @@
  *
  *****************************************************************************/
 
-#include "../../config.h"
+#include "config.h"
 
 #if defined(MINGW32) | defined(WIN32) 
 

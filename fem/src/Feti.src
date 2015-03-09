@@ -41,7 +41,7 @@
 !>  Basic FETI solver, for Poisson & Navier style of equations.
 !-------------------------------------------------------------------------------
 
-#include "../config.h"
+#include "config.h"
 
 MODULE FetiSolve
 

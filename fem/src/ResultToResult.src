@@ -533,7 +533,8 @@ PROGRAM ResultToResult
 ! pass it as the fourth argument instead of NewModel % Variables
 
      CALL InterpolateMeshToMesh( OldModel % Meshes, NewModel % Meshes, &
-      OldModel % Meshes % Variables, NewModel % Meshes % Variables )
+      OldModel % Meshes % Variables, NewModel % Meshes % Variables, &
+      OldModel % Solvers(1) % CylindricSymmetric )
 
 !------------------------------------------------------------------------------
      PRINT*,'*** Interpolation: ALL DONE ***'

@@ -38,7 +38,7 @@
 // Include necessary headers.
 //
 
-#include <../../config.h>
+#include <config.h>
 
 #include "glp.h"
 #include <math.h>

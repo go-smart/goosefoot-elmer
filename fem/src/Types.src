@@ -41,7 +41,7 @@
 !> Type definitions for Elmer library.
 !------------------------------------------------------------------------------
 
-#include "../config.h"
+#include "config.h"
 MODULE Types
  
    USE Messages
@@ -205,7 +205,8 @@ END INTERFACE
     INTEGER(KIND=C_INTPTR_T) :: Hypre=0
 #endif
 #ifdef HAVE_TRILINOS
-    INTEGER(KIND=C_INTPTR_T) :: Trilinos=0
+    INTEGER(KIND=C_INTPTR_T) :: TrilinosEpetra=0
+    INTEGER(KIND=C_INTPTR_T) :: TrilinosKokkos=0
 #endif
     INTEGER(KIND=AddrInt) :: SpMV=0
 
@@ -677,6 +678,8 @@ END INTERFACE
       TYPE(BlockMatrix_t), POINTER :: BlockMatrix => NULL()
       TYPE(Matrix_t),   POINTER :: Matrix => NULL()
       TYPE(Variable_t), POINTER :: Variable => NULL()
+
+      LOGICAL :: CylindricSymmetric
     END TYPE Solver_t
 
 !------------------------------------------------------------------------------
