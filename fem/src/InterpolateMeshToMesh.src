@@ -14,6 +14,7 @@
        USE Interpolation
        USE CoordinateSystems
        USE MeshUtils, ONLY: ReleaseMesh
+       USE ParallelUtils
 !-------------------------------------------------------------------------------
        TYPE(Mesh_t), TARGET  :: OldMesh, NewMesh
        TYPE(Variable_t), POINTER, OPTIONAL :: OldVariables, NewVariables
@@ -62,7 +63,7 @@
          END SUBROUTINE InterpolateMeshToMeshQ
        END INTERFACE
 !-------------------------------------------------------------------------------
-
+      WRITE(*,*) ParEnv%PEs
       IF ( ParEnv % PEs<=1 ) THEN
          CALL InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, &
             NewVariables, UseQuadrantTree, Projector, MaskName, &
@@ -70,20 +71,21 @@
             AffineBackTransformation=AffineBackTransformation)
          RETURN
       END IF
+      CALL ParallelActive(.TRUE.)
 
       ! Interpolate within our own partition, flag the points
       ! we found:
       ! -----------------------------------------------------
       ALLOCATE( FoundNodes(NewMesh % NumberOfNodes) ); FoundNodes=.FALSE.
       CALL InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, &
-         NewVariables, UseQuadrantTree, MaskName=MaskName, FoundNodes=FoundNodes, &
+         NewVariables, UseQuadrantTree,Projector, MaskName=MaskName, FoundNodes=FoundNodes, &
          CylindricSymmetricSolver=CylindricSymmetricSolver, &
          AffineBackTransformation=AffineBackTransformation)
 
       ! special case "all found":
       !--------------------------
       n = COUNT(.NOT.FoundNodes); dn = n
-      CALL SParActiveSUM(dn,2)
+     CALL SParActiveSUM(dn,2)
       IF ( dn==0 ) RETURN
 
       ! Exchange partition bounding boxes:
@@ -286,7 +288,7 @@
         ! ----------------------------------------
         ALLOCATE( FoundNodes(n) ); FoundNodes=.FALSE.
         CALL InterpolateMeshToMeshQ( OldMesh, nMesh, OldVariables, &
-           nMesh % Variables, UseQuadrantTree, MaskName=MaskName, FoundNodes=FoundNodes,&
+           nMesh % Variables, UseQuadrantTree, Projector, MaskName=MaskName, FoundNodes=FoundNodes,&
                     CylindricSymmetricSolver=CylindricSymmetricSolver, &
          AffineBackTransformation=AffineBackTransformation)
 
@@ -495,12 +497,13 @@ CONTAINS
        TYPE(Variable_t), POINTER, OPTIONAL :: NewVariables  !< New model variable structure. NewVariables defines the variables to be interpolated
        LOGICAL, OPTIONAL :: UseQuadrantTree  !< If true use the RootQuadrant of the old mesh in interpolation.
        TYPE(Projector_t), POINTER, OPTIONAL :: Projector  !< Use projector between meshes for interpolation, if available
-       CHARACTER(LEN=*),OPTIONAL :: MaskName  !< Mask the old variable set by the given MaskName when trying to define the interpolation.
+       CHARACTER(LEN=*),OPTIONAL :: MaskName !< Mask the old variable set by the given MaskName when trying to define the interpolation.
        LOGICAL, OPTIONAL :: FoundNodes(:)     !< List of nodes where the interpolation was a success
        LOGICAL, OPTIONAL :: CylindricSymmetricSolver 
        REAL(KIND=dp), POINTER, OPTIONAL :: AffineBackTransformation(:,:)
+       CHARACTER(LEN=90) :: PanchFile
 !------------------------------------------------------------------------------
-       INTEGER :: dim
+       INTEGER :: dim,Panch
        TYPE(Nodes_t) :: ElementNodes
        INTEGER :: nBulk, i, j, k, l, n, np, bf_id, QTreeFails, TotFails
        REAL(KIND=dp), DIMENSION(3) :: Point, NewPoint
@@ -641,6 +644,7 @@ CONTAINS
          Point(3) = NewMesh % Nodes % z(i)
 
          IF (PRESENT(AffineBackTransformation)) THEN
+!        WRITE(*,*) "Before Projection",Point
            NewPoint = Point
            Point(1) = SUM(AffineBackTransformation(1:3,1) * NewPoint) + AffineBackTransformation(4,1)
            Point(2) = SUM(AffineBackTransformation(1:3,2) * NewPoint) + AffineBackTransformation(4,2)
@@ -652,9 +656,10 @@ CONTAINS
            IF (Point(1) > 0._dp) THEN
              Point(1) = SQRT(Point(1))
            END IF
-           Point(3) = 0._dp
+           Point(3) = 0._dp         
+!           READ(*,*) Panch
          END IF
-
+!        WRITE(353,*) Point
 !------------------------------------------------------------------------------
 ! Find in which old mesh bulk element the point belongs to
 !------------------------------------------------------------------------------
@@ -761,7 +766,7 @@ CONTAINS
 !         --------------------------------------------
           Var => OldVariables
           DO WHILE( ASSOCIATED( Var ) )
-
+!            WRITE(*,*) 'Inside the Do while'
              IF( SIZE( Var % Values ) == Var % DOFs ) THEN
                Var => Var % Next
                CYCLE
@@ -822,6 +827,7 @@ CONTAINS
 !------------------------------------------------------------------------------
              END IF
              Var => Var % Next
+!             WRITE(353,*) Point,NewValue(NewSol % Perm(i))
            END DO
 !------------------------------------------------------------------------------
          END DO
@@ -1046,10 +1052,24 @@ CONTAINS
 !------------------------------------------------------------------------------
      SUBROUTINE ApplyProjector
 !------------------------------------------------------------------------------
-        INTEGER :: i
+        INTEGER :: i,k
         TYPE(Variable_t), POINTER :: Var
+!RMV Panch        
+!        REAL(kind=dp),DIMENSION(1000000,256)::Panchvar 
+!        character(len=20) :: buffer
+!        logical :: exist
+!        integer :: ind        
+!RMV Panch        
 !------------------------------------------------------------------------------
         Var => OldVariables
+!RMV Panch        
+!        Do i=1,NewMesh%NumberOfNodes
+!             Panchvar(i,1)=NewMesh%Nodes%x(i)
+!             Panchvar(i,2)=NewMesh%Nodes%y(i)
+!             Panchvar(i,3)=NewMesh%Nodes%z(i)             
+!        END DO        
+!        k=4
+!RMV Panch        
         DO WHILE( ASSOCIATED(Var) )
            IF( SIZE( Var % Values ) == Var % DOFs ) THEN   
              Var => Var % Next
@@ -1084,7 +1104,34 @@ CONTAINS
               END IF
            END IF
            Var => Var % Next
+!RMV Panch                   
+!         Do i=1,NewMesh%NumberOfNodes
+!           Panchvar(i,k)=NewSol % Values(NewSol % Perm(i)) 
+!         END DO 
+!           k=k+1 
+!RMV Panch             
         END DO
+!RMV Panch                
+!       WRITE(*,*) "Enter the file number "
+!       ind = 1
+!        fileloop: do
+!          write(buffer,"(A,I5.5,A)") "Projected", ind, ".dat"
+!          inquire(file=buffer, exist=exist)
+!          if (.not. exist) then
+!            write(*,*) "File '", trim(buffer), "' not found, exiting loop"
+!            PanchFile=buffer
+!            exit
+!          end if
+!!          write(*,*) "File: '", trim(buffer), "' found."
+!          ind = ind + 1
+!        end do fileloop
+!       WRITE(*,*) "Enter the file number ",PanchFile        
+!       OPEN(353, FILE=PanchFile)
+!       Do i=1,NewMesh%NumberOfNodes
+!           WRITE(353,*) Panchvar(i,1:k)
+!       END DO   
+!RMV Panch        
+        
 !------------------------------------------------------------------------------
      END SUBROUTINE ApplyProjector
 !------------------------------------------------------------------------------

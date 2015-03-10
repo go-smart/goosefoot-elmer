@@ -59,8 +59,6 @@
           LOGICAL :: Found
 
           SolverParams => GetSolverParams()
-          CALL ListAddString( SolverParams,&
-               NextFreeKeyword('Exported Variable',SolverParams),'Heat Source Calc')
    END SUBROUTINE HeatSolver_init
 
    SUBROUTINE HeatSolver( Model,Solver,Timestep,TransientSimulation )
@@ -132,7 +130,7 @@
     LOGICAL, POINTER :: SmartHeaters(:), IntegralHeaters(:)
 
     TYPE(Variable_t), POINTER :: TempSol,FlowSol,HeatSol,CurrentSol, MeshSol, DensitySol, &
-        CellStateSol, LoadVar
+        CellStateSol
     TYPE(ValueList_t), POINTER :: Equation,Material,SolverParams,BodyForce,BC,Constants
 
     INTEGER, POINTER :: TempPerm(:),FlowPerm(:),CurrentPerm(:),MeshPerm(:), &
@@ -1169,8 +1167,6 @@
 !      Bulk elements
 !------------------------------------------------------------------------------
         CALL StartAdvanceOutput( 'HeatSolve', 'Assembly:' )
-        LoadVar => VariableGet(Solver % Mesh % Variables, 'Heat Source Calc')
-        LoadVar % Values = 0._dp
         DO t=1,Solver % NumberOfActiveElements
 
          CALL AdvanceOutput(t,GetNOFActive())
@@ -1575,13 +1571,6 @@
               END IF
            END IF
 
-           DO i=1,n
-             k = LoadVar % Perm(Element % NodeIndexes(i))
-             IF ( k > 0 ) THEN
-!------------------------------------------------------------------------------
-               LoadVar % Values(k) = Load(i)
-             END IF
-           END DO
          END IF
 
          CALL TotalPowerCompose( LOAD, Element, n, ElementNodes ) 

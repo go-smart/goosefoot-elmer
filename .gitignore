@@ -26,6 +26,7 @@ cmake_install.cmake
 CTestTestfile.cmake
 FC.h
 FCMangle.h
-
+*.ep*
+partitioning.*
 elmerf90
 __pycache__
