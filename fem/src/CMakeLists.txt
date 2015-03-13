@@ -65,13 +65,17 @@ TARGET_LINK_LIBRARIES(elmersolver
   parpack binio ${Trilinos_LIBRARIES})
 
 ADD_EXECUTABLE(ElmerSolver_mpi Solver.F90)
+ADD_EXECUTABLE(ResultToResult ResultToResult.F90)
 
 TARGET_LINK_LIBRARIES(ElmerSolver_mpi elmersolver matc huti eioc eiof
   umfpack amd ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} ${MUMPS_LIBRARIES} arpack parpack binio
   ${CMAKE_DL_LIBS})
+TARGET_LINK_LIBRARIES(ResultToResult elmersolver matc huti eioc eiof
+  umfpack amd ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} arpack parpack binio
+  ${CMAKE_DL_LIBS})
 
 INSTALL(FILES elements.def SOLVER.KEYWORDS DESTINATION "share/elmersolver/lib")
-INSTALL(TARGETS ElmerSolver_mpi elmersolver RUNTIME DESTINATION "bin" LIBRARY DESTINATION "lib") 
+INSTALL(TARGETS ElmerSolver_mpi ResultToResult elmersolver RUNTIME DESTINATION "bin" LIBRARY DESTINATION "lib") 
 INSTALL(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/elmerf90 DESTINATION "bin")
 INSTALL(CODE
     "EXECUTE_PROCESS (COMMAND \"${CMAKE_COMMAND}\" -E copy_directory \"${CMAKE_Fortran_MODULE_DIRECTORY}/\${BUILD_TYPE}\" \"${CMAKE_Fortran_MODULE_DESTINATION}\")"
