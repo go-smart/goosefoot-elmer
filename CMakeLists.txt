@@ -72,6 +72,14 @@ SET(CMAKE_Fortran_MODULE_DESTINATION
     ${CMAKE_INSTALL_PREFIX}/include/elmer/f90 CACHE PATH "Destination for Fortran modules."
 )
 
+EXEC_PROGRAM(
+    "git"
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ARGS "describe" "--tags" "--always"
+    OUTPUT_VARIABLE GIT_REVISION)
+FILE(WRITE ${PROJECT_BINARY_DIR}/gitrev "${GIT_REVISION}")
+INSTALL(FILES ${PROJECT_BINARY_DIR}/gitrev DESTINATION share/elmersolver)
+
 ADD_SUBDIRECTORY(umfpack)
 ADD_SUBDIRECTORY(hutiter)
 ADD_SUBDIRECTORY(eio)

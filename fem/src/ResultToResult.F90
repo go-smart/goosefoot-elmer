@@ -81,16 +81,19 @@ PROGRAM ResultToResult
 
      REAL(KIND=dp) :: s,dt
 
-     REAL(KIND=dp), TARGET :: SimulationTime(1)
+     TYPE(Variable_t), POINTER :: Var
 
-     REAL(KIND=dp), POINTER ::  TimeVariable(:)
+     REAL(KIND=dp), TARGET :: SimulationTime(1), SimulationTimestep(1)
+
+     REAL(KIND=dp), POINTER ::  TimeVariable(:), TimestepVariable(:)
 
      LOGICAL :: GotIt,TransientSimulation,LastSaved
 
-     INTEGER :: TimeIntervals,interval,timestep,SavedSteps,TimeStepMaxIter
+     INTEGER :: TimeIntervals,interval,timestep,SavedSteps,TimeStepMaxIter, &
+       TotalTimesteps
 
      REAL(KIND=dp), POINTER :: TimestepSizes(:,:)
-     INTEGER, POINTER :: Timesteps(:),OutputIntervals(:)
+     INTEGER, POINTER :: Timesteps(:),OutputIntervals(:), ActiveSolvers(:)
 
      LOGICAL :: KEModelSolved = .FALSE., SteadyStateReached = .FALSE.
 
@@ -114,6 +117,20 @@ PROGRAM ResultToResult
      REAL(KIND=dp), DIMENSION(6) :: BoundingBox
      TYPE(Quadrant_t), POINTER :: RootQuadrant
      LOGICAL :: QuadrantTreeExists=.FALSE.
+      INTERFACE
+        SUBROUTINE InterpolateMeshToMesh( OldMesh, NewMesh, OldVariables, &
+            NewVariables, UseQuadrantTree, Projector, MaskName, &
+            CylindricSymmetricSolver, AffineBackTransformation )
+          USE Types
+          TYPE(Variable_t), POINTER, OPTIONAL :: OldVariables, NewVariables
+          TYPE(Mesh_t), TARGET  :: OldMesh, NewMesh
+          LOGICAL, OPTIONAL :: UseQuadrantTree
+          CHARACTER(LEN=*),OPTIONAL :: MaskName
+          TYPE(Projector_t), POINTER, OPTIONAL :: Projector
+          LOGICAL, OPTIONAL :: CylindricSymmetricSolver
+          REAL(KIND=dp), POINTER, OPTIONAL :: AffineBackTransformation(:,:)
+        END SUBROUTINE InterpolateMeshToMesh
+      END INTERFACE
 
 
 !------------------------------------------------------------------------------
@@ -252,13 +269,15 @@ PROGRAM ResultToResult
 !   Figure out what (flow,heat,stress,...) should be computed, and get
 !   memory for the dofs
 !------------------------------------------------------------------------------
-     DO i=1,OldModel % NumberOfSolvers
-       eq = ListGetString( OLdModel % Solvers(i) % Values,'Equation' )
+     CurrentModel => OldModel
+     CALL AddSolvers()
+     PRINT *, ")))"
+          Var => OldModel % Meshes % Variables
+          DO WHILE( ASSOCIATED( Var ) )
+            PRINT *, Var % Name
+            Var => Var % Next
+          END DO
 
-       Solver => OldModel % Solvers(i)
-       CALL AddEquationBasics( Solver, eq, TransientSimulation )
-       CALL AddEquationSolution( Solver, TransientSimulation )
-     END DO
 
 !------------------------------------------------------------------------------
 !    Add coordinates to list of variables so that coordinate dependent
@@ -322,19 +341,42 @@ PROGRAM ResultToResult
      OldOutputFile = ListGetString(OldModel % Simulation,'Output File',GotIt)
      IF ( .NOT.GotIt ) OldOutputFile = 'Result.dat'
 
-     OutputIntervals => ListGetIntegerArray( OldModel % Simulation, &
-                     'Output Intervals' )
+       OutputIntervals => ListGetIntegerArray( CurrentModel % Simulation, &
+                       'Output Intervals', GotIt )
+       IF ( .NOT. GotIt ) THEN
+         ALLOCATE( OutputIntervals(SIZE(TimeSteps)) )
+         OutputIntervals = 1
+       END IF
 
+
+
+       ! Compute the total number of steps that will be saved to the files
+       ! Particularly look if the last step will be saved, or if it has
+       ! to be saved separately.
+       !------------------------------------------------------------------
+       TotalTimesteps = 0
+       LastSaved = .TRUE.
+       DO interval=1,TimeIntervals
+         DO timestep = 1,Timesteps(interval)
+           IF( OutputIntervals(Interval) == 0 ) CYCLE
+           LastSaved = .FALSE.
+           IF ( MOD(Timestep-1, OutputIntervals(Interval))==0 ) THEN
+              LastSaved = .TRUE.
+              TotalTimesteps = TotalTimesteps + 1
+           END IF
+         END DO
+       END DO
 
 !------------------------------------------------------------------------------
 !    Add simulation time to list of system variables so that parameters
 !    depending on time  may be set.
 !------------------------------------------------------------------------------
-     TimeVariable => SimulationTime
      Mesh => OldModel % Meshes
      TimeVariable => SimulationTime
+     TimestepVariable => SimulationTimestep
      DO WHILE( ASSOCIATED(Mesh) )
        CALL VariableAdd( Mesh % Variables,Mesh,Solver,'Time',1,TimeVariable )
+       CALL VariableAdd( Mesh % Variables,Mesh,Solver,'Timestep',1,TimestepVariable )
        Mesh => Mesh % Next
      END DO
 
@@ -343,7 +385,7 @@ PROGRAM ResultToResult
 !------------------------------------------------------------------------------
 
      RestartFile = ListGetString( OldModel % Simulation, &
-                 'Restart File', GotIt )
+                 'Output File', GotIt )
 
      IF ( GotIt ) THEN
        k = ListGetInteger( OldModel % Simulation,'Restart Position',GotIt )
@@ -431,13 +473,8 @@ PROGRAM ResultToResult
 !   Figure out what (flow,heat,stress,...) should be computed, and get
 !   memory for the dofs
 !------------------------------------------------------------------------------
-     DO i=1,NewModel % NumberOfSolvers
-       eq = ListGetString( NewModel % Solvers(i) % Values,'Equation' )
-
-       Solver => NewModel % Solvers(i)
-       CALL AddEquationBasics( Solver, eq, TransientSimulation )
-       CALL AddEquationSolution( Solver, TransientSimulation )
-     END DO
+     CurrentModel => NewModel
+     CALL AddSolvers()
 
 !------------------------------------------------------------------------------
 !    Add coordinates to list of variables so that coordinate dependent
@@ -511,11 +548,12 @@ PROGRAM ResultToResult
 !    Add simulation time to list of system variables so that parameters
 !    depending on time  may be set.
 !------------------------------------------------------------------------------
-     TimeVariable => SimulationTime
      Mesh => NewModel % Meshes
      TimeVariable => SimulationTime
+     TimestepVariable => SimulationTimestep
      DO WHILE( ASSOCIATED(Mesh) )
        CALL VariableAdd( Mesh % Variables,Mesh,Solver,'Time',1,TimeVariable )
+       CALL VariableAdd( Mesh % Variables,Mesh,Solver,'Timestep',1,TimestepVariable )
        Mesh => Mesh % Next
      END DO
 
@@ -534,7 +572,7 @@ PROGRAM ResultToResult
 
      CALL InterpolateMeshToMesh( OldModel % Meshes, NewModel % Meshes, &
       OldModel % Meshes % Variables, NewModel % Meshes % Variables, &
-      OldModel % Solvers(1) % CylindricSymmetric )
+      CylindricSymmetricSolver=OldModel % Solvers(1) % CylindricSymmetric )
 
 !------------------------------------------------------------------------------
      PRINT*,'*** Interpolation: ALL DONE ***'
@@ -544,7 +582,7 @@ PROGRAM ResultToResult
 !------------------------------------------------------------------------------
      PRINT*,'*** New result file written ***'
 !------------------------------------------------------------------------------
-     CALL SaveCurrent
+     CALL SaveCurrent(FLOOR(TimestepVariable(1)))
 !------------------------------------------------------------------------------
      PRINT*,'*** New post file written ***'
 !------------------------------------------------------------------------------
@@ -552,52 +590,149 @@ PROGRAM ResultToResult
 CONTAINS
 
 !------------------------------------------------------------------------------
-   SUBROUTINE SaveCurrent
+  SUBROUTINE SaveCurrent( CurrentStep )
 !------------------------------------------------------------------------------
-     TYPE(Variable_t), POINTER :: Var
-     INTEGER :: i
-     CHARACTER(LEN=MAX_NAME_LEN) :: Simul, OutputName
-     LOGICAL :: BinaryOutput, SaveAll
- 
-     Simul = ListGetString( CurrentModel % Simulation, &
-                     'Simulation Type' )
+    INTEGER :: i, j,k,l,n,q,CurrentStep,nlen
+    TYPE(Variable_t), POINTER :: Var
+    LOGICAL :: EigAnal, GotIt
+    CHARACTER(LEN=MAX_NAME_LEN) :: Simul
+    LOGICAL :: BinaryOutput, SaveAll
+    
+    Simul = ListGetString( CurrentModel % Simulation, 'Simulation Type' )
+    
+      IF ( ParEnv % PEs > 1 ) THEN
+        DO i=1,MAX_NAME_LEN
+          IF ( OutputFile(i:i) == ' ' ) EXIT
+        END DO
+        OutputFile(i:i) = '.'
+        WRITE( OutputFile(i+1:), '(a)' ) TRIM(i2s(ParEnv % MyPE))
+      END IF
+      
+      BinaryOutput = ListGetLogical( CurrentModel % Simulation,'Binary Output',GotIt )
+      IF ( .NOT.GotIt ) BinaryOutput = .FALSE.
+      
+      SaveAll = .NOT.ListGetLogical( CurrentModel % Simulation,&
+          'Omit unchanged variables in output',GotIt )
+      IF ( .NOT.GotIt ) SaveAll = .TRUE.
+      
+      Mesh => CurrentModel % Meshes
+      DO WHILE( ASSOCIATED( Mesh ) ) 
+        !IF ( Mesh % OutputActive ) THEN
+          nlen = LEN_TRIM(Mesh % Name )
+          IF ( nlen > 0 ) THEN
+            OutputName = Mesh % Name(1:nlen) // '/' // TRIM(OutputFile)
+          ELSE
+            OutputName = OutputFile
+          END IF
+          
+          EigAnal = .FALSE.
+          DO i=1,CurrentModel % NumberOfSolvers
+            IF ( ASSOCIATED( CurrentModel % Solvers(i) % Mesh, Mesh ) ) THEN
+              EigAnal = ListGetLogical( CurrentModel % Solvers(i) % Values, &
+                  'Eigen Analysis', GotIt )
+              EigAnal = EigAnal .OR. ListGetLogical( CurrentModel % Solvers(i) % Values, &
+                  'Harmonic Analysis', GotIt )
+              
+              IF ( EigAnal ) THEN
+                Var => CurrentModel % Solvers(i) % Variable
+                IF ( ASSOCIATED(Var % EigenValues) ) THEN
+                  IF ( TotalTimesteps == 1 ) THEN
+                    DO j=1,CurrentModel % Solvers(i) % NOFEigenValues
+                      IF ( CurrentModel % Solvers(i) % Matrix % COMPLEX ) THEN
 
-     BinaryOutput = ListGetLogical( CurrentModel % Simulation,'Binary Output',GotIt )
-     IF ( .NOT.GotIt ) BinaryOutput = .FALSE.
-
-     SaveAll = .NOT.ListGetLogical( CurrentModel % Simulation,&
-                                    'Omit unchanged variables in output',GotIt )
-     IF ( .NOT.GotIt ) SaveAll = .TRUE.
-
-     Mesh => CurrentModel % Meshes
-     DO WHILE( ASSOCIATED( Mesh ) ) 
-       IF ( LEN_TRIM(Mesh % Name )>0 ) THEN
-         OutputName = TRIM(Mesh % Name) // '/' // TRIM(OutputFile)
-       ELSE
-         OutputName = OutputFile
-       END IF
-       IF ( Simul == 'eigen analysis' ) THEN
-         DO i=1,CurrentModel % Solvers(1) % NOFEigenValues
-           Var => Mesh % Variables
-           DO WHILE( ASSOCIATED( Var ) ) 
-             IF ( Var % Name(1:4)  /= 'time' .AND. &
-                     Var % Name(1:10) /= 'coordinate' ) THEN
-               Var % Values = REAL(Var % EigenVectors(i,:))
-               simulationtime(1) = real(var % eigenvalues(i))
-             END IF
-             Var => Var % Next
-           END DO
-           SavedSteps = SaveResult( OutputName,Mesh, &
-                   i,SimulationTime(1),BinaryOutput,SaveAll )
-         END DO
-       ELSE
-         SavedSteps = SaveResult( OutputName,Mesh,Time,SimulationTime(1),BinaryOutput,SaveAll )
-       END IF
-       Mesh => Mesh % Next
-     END DO
-     CALL SaveToPost
+                        n = SIZE(Var % Values)/Var % DOFs
+                        DO k=1,n
+                          DO l=1,Var % DOFs/2
+                            q = Var % DOFs*(k-1)
+                            Var % Values(q+l) = REAL(Var % EigenVectors(j,q/2+l))
+                            Var % Values(q+l+Var % DOFs/2) = AIMAG(Var % EigenVectors(j,q/2+l))
+                          END DO
+                        END DO
+                      ELSE
+                        Var % Values = REAL( Var % EigenVectors(j,:) )
+                      END IF
+                      SavedSteps = SaveResult( OutputName, Mesh, &
+                          j, TimeVariable(1), BinaryOutput, SaveAll )
+                    END DO
+                  ELSE
+                    j = MIN( CurrentStep, SIZE( Var % EigenVectors,1 ) )
+                    IF ( CurrentModel % Solvers(i) % Matrix % COMPLEX ) THEN
+                      n = SIZE(Var % Values)/Var % DOFs
+                      DO k=1,n
+                        DO l=1,Var % DOFs/2
+                          q = Var % DOFs*(k-1)
+                          Var % Values(q+l) = REAL(Var % EigenVectors(j,q/2+l))
+                          Var % Values(q+l+Var % DOFs/2) = AIMAG(Var % EigenVectors(j,q/2+l))
+                        END DO
+                      END DO
+                    ELSE
+                      Var % Values = REAL(Var % EigenVectors(j,:))
+                    END IF
+                    SavedSteps = SaveResult( OutputName, Mesh, &
+                        CurrentStep, TimeVariable(1), BinaryOutput, SaveAll )
+                  END IF
+                  Var % Values = 0.0d0
+                END IF
+              END IF
+            END IF
+          END DO
+          
+          IF ( .NOT. EigAnal ) THEN
+            SavedSteps = SaveResult( OutputName,Mesh, NINT(TimestepVariable(1)), &
+                TimeVariable(1), BinaryOutput, SaveAll )
+          END IF
+        !END IF
+        Mesh => Mesh % Next
+      END DO
+    CALL SaveToPost
 !------------------------------------------------------------------------------
-   END SUBROUTINE SaveCurrent
+  END SUBROUTINE SaveCurrent
+!   SUBROUTINE SaveCurrent
+!!------------------------------------------------------------------------------
+!     TYPE(Variable_t), POINTER :: Var
+!     INTEGER :: i
+!     CHARACTER(LEN=MAX_NAME_LEN) :: Simul, OutputName
+!     LOGICAL :: BinaryOutput, SaveAll
+! 
+!     Simul = ListGetString( CurrentModel % Simulation, &
+!                     'Simulation Type' )
+!
+!     BinaryOutput = ListGetLogical( CurrentModel % Simulation,'Binary Output',GotIt )
+!     IF ( .NOT.GotIt ) BinaryOutput = .FALSE.
+!
+!     SaveAll = .NOT.ListGetLogical( CurrentModel % Simulation,&
+!                                    'Omit unchanged variables in output',GotIt )
+!     IF ( .NOT.GotIt ) SaveAll = .TRUE.
+!
+!     Mesh => CurrentModel % Meshes
+!     DO WHILE( ASSOCIATED( Mesh ) ) 
+!       IF ( LEN_TRIM(Mesh % Name )>0 ) THEN
+!         OutputName = TRIM(Mesh % Name) // '/' // TRIM(OutputFile)
+!       ELSE
+!         OutputName = OutputFile
+!       END IF
+!       IF ( Simul == 'eigen analysis' ) THEN
+!         DO i=1,CurrentModel % Solvers(1) % NOFEigenValues
+!           Var => Mesh % Variables
+!           DO WHILE( ASSOCIATED( Var ) ) 
+!             IF ( Var % Name(1:4)  /= 'time' .AND. &
+!                     Var % Name(1:10) /= 'coordinate' ) THEN
+!               Var % Values = REAL(Var % EigenVectors(i,:))
+!               simulationtime(1) = real(var % eigenvalues(i))
+!             END IF
+!             Var => Var % Next
+!           END DO
+!           SavedSteps = SaveResult( OutputName,Mesh, &
+!                   i,SimulationTime(1),BinaryOutput,SaveAll )
+!         END DO
+!       ELSE
+!         SavedSteps = SaveResult( OutputName,Mesh,Time,SimulationTime(1),BinaryOutput,SaveAll )
+!       END IF
+!       Mesh => Mesh % Next
+!     END DO
+!     CALL SaveToPost
+!!------------------------------------------------------------------------------
+!   END SUBROUTINE SaveCurrent
 !------------------------------------------------------------------------------
 
 !------------------------------------------------------------------------------
@@ -657,6 +792,58 @@ CONTAINS
     END SUBROUTINE SaveToPost
 !------------------------------------------------------------------------------
 
+    SUBROUTINE AddSolvers()
+!------------------------------------------------------------------------------
+      INTEGER :: i,j,k,nlen
+      LOGICAL :: InitSolver, Found
+!------------------------------------------------------------------------------
+
+      ! This is a hack that sets Equation flags True for the "Active Solvers".
+      ! The Equation flag is the legacy way of setting a Solver active and is still
+      ! used internally.
+      !----------------------------------------------------------------------------
+      DO i=1,CurrentModel % NumberOfSolvers
+
+        eq = ListGetString( CurrentModel % Solvers(i) % Values,'Equation', Found )
+     
+        IF ( Found ) THEN
+          nlen = LEN_TRIM(eq)
+          DO j=1,CurrentModel % NumberOFEquations
+             ActiveSolvers => ListGetIntegerArray( CurrentModel % Equations(j) % Values, &
+                                'Active Solvers', Found )
+             IF ( Found ) THEN
+                DO k=1,SIZE(ActiveSolvers)
+                   IF ( ActiveSolvers(k) == i ) THEN
+                      CALL ListAddLogical( CurrentModel % Equations(j) % Values, eq(1:nlen), .TRUE. )
+                      EXIT
+                   END IF
+                END DO
+             END IF
+          END DO
+       END IF
+     END DO
+
+     DO i=1,CurrentModel % NumberOfSolvers
+        eq = ListGetString( CurrentModel % Solvers(i) % Values,'Equation', Found )
+
+        Solver => CurrentModel % Solvers(i)
+        InitSolver = ListGetLogical( Solver % Values, 'Initialize', Found )
+        IF ( Found .AND. InitSolver ) THEN
+          CALL FreeMatrix( Solver % Matrix )
+          CALL ListAddLogical( Solver % Values, 'Initialize', .FALSE. )
+        END IF
+
+        IF ( Solver % PROCEDURE == 0 .OR. InitSolver ) THEN
+          IF ( .NOT. ASSOCIATED( Solver % Mesh ) ) THEN
+            Solver % Mesh => CurrentModel % Meshes
+          END IF
+          CurrentModel % Solver => Solver
+          CALL AddEquationBasics( Solver, eq, TransientSimulation )
+          CALL AddEquationSolution( Solver, TransientSimulation )
+        END IF
+     END DO
+!------------------------------------------------------------------------------
+  END SUBROUTINE AddSolvers
 
    END PROGRAM ResultToResult
 !------------------------------------------------------------------------------
