@@ -858,13 +858,17 @@ CONTAINS
 !------------------------------------------------------------------------------
        INTERFACE
          SUBROUTINE InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, &
-             NewVariables, UseQuadrantTree, Projector, MaskName, FoundNodes )
+             NewVariables, UseQuadrantTree, Projector, MaskName, FoundNodes, &
+             CylindricSymmetricSolver, AffineBackTransformation, Extrapolate )
            USE Types
            TYPE(Variable_t), POINTER, OPTIONAL :: OldVariables, NewVariables
            TYPE(Mesh_t), TARGET  :: OldMesh, NewMesh
            LOGICAL, OPTIONAL :: UseQuadrantTree,FoundNodes(:)
            CHARACTER(LEN=*),OPTIONAL :: MaskName
            TYPE(Projector_t), POINTER, OPTIONAL :: Projector
+           LOGICAL, OPTIONAL :: CylindricSymmetricSolver 
+           REAL(KIND=dp), POINTER, OPTIONAL :: AffineBackTransformation(:,:)
+           LOGICAL, OPTIONAL :: Extrapolate
          END SUBROUTINE InterpolateMeshToMeshQ
        END INTERFACE
 
@@ -904,7 +908,7 @@ CONTAINS
       TYPE(Variable_t), POINTER :: Var,PVar,Tmp,AidVar
       REAL(KIND=dp), POINTER :: Vals(:)
       INTEGER :: i,k,n, DOFs
-      LOGICAL :: Found, GlobalBubbles, UseProjector, CylindricSymmetricSolver
+      LOGICAL :: Found, GlobalBubbles, UseProjector, CylindricSymmetricSolver, Extrapolate
       CHARACTER(LEN=LEN_TRIM(Name)) :: str
       CHARACTER(LEN=MAX_NAME_LEN) :: tmpname
       DOUBLE PRECISION :: t1,CPUTime
@@ -912,7 +916,7 @@ CONTAINS
       INTERFACE
         SUBROUTINE InterpolateMeshToMesh( OldMesh, NewMesh, OldVariables, &
             NewVariables, UseQuadrantTree, Projector, MaskName, &
-            CylindricSymmetricSolver, AffineBackTransformation )
+            CylindricSymmetricSolver, AffineBackTransformation, Extrapolate )
           USE Types
           TYPE(Variable_t), POINTER, OPTIONAL :: OldVariables, NewVariables
           TYPE(Mesh_t), TARGET  :: OldMesh, NewMesh
@@ -921,6 +925,7 @@ CONTAINS
           TYPE(Projector_t), POINTER, OPTIONAL :: Projector
           LOGICAL, OPTIONAL :: CylindricSymmetricSolver
           REAL(KIND=dp), POINTER, OPTIONAL :: AffineBackTransformation(:,:)
+          LOGICAL, OPTIONAL :: Extrapolate
         END SUBROUTINE InterpolateMeshToMesh
       END INTERFACE
 !------------------------------------------------------------------------------
@@ -948,7 +953,6 @@ CONTAINS
       IF ( PRESENT(ThisOnly) ) THEN
          IF ( ThisOnly ) RETURN
       END IF
-
 !------------------------------------------------------------------------------
       NULLIFY( PVar )
       Mesh => CurrentModel % Meshes
@@ -1120,16 +1124,21 @@ CONTAINS
       CylindricSymmetricSolver = ListGetLogical(PVar % Solver % Values,'Cylindric Symmetric',Found)
       IF( .NOT. Found ) CylindricSymmetricSolver = .FALSE.
 
+      Extrapolate = .NOT. ListGetLogical(PVar % Solver % Values,'Interpolation Only',Found)
+      IF( .NOT. Found ) Extrapolate = .TRUE.
+
       IF( PRESENT( MaskName ) ) THEN
        CALL InterpolateMeshToMesh( PVar % PrimaryMesh, &
             CurrentModel % Mesh, Var, Variables, MaskName=MaskName, &
             CylindricSymmetricSolver=CylindricSymmetricSolver, &
-            AffineBackTransformation=AffineBackTransformation)
+            AffineBackTransformation=AffineBackTransformation, &
+            Extrapolate=Extrapolate)
       ELSE IF( UseProjector ) THEN
         CALL InterpolateMeshToMesh( PVar % PrimaryMesh, &
             CurrentModel % Mesh, Var, Variables, Projector=Projector, &
             CylindricSymmetricSolver=CylindricSymmetricSolver, &
-            AffineBackTransformation=AffineBackTransformation)
+            AffineBackTransformation=AffineBackTransformation, &
+            Extrapolate=Extrapolate)
       ELSE
         AidVar => VariableGet( CurrentModel % Mesh % Variables, Name, ThisOnly = .TRUE. ) 
         IF( ASSOCIATED( AidVar ) ) THEN
@@ -1138,7 +1147,8 @@ CONTAINS
         CALL InterpolateMeshToMesh( PVar % PrimaryMesh, &
             CurrentModel % Mesh, Var, Variables, &
             CylindricSymmetricSolver=CylindricSymmetricSolver, &
-            AffineBackTransformation=AffineBackTransformation)
+            AffineBackTransformation=AffineBackTransformation, &
+            Extrapolate=Extrapolate)
       END IF
 
       WRITE( Message,'(A,ES12.3)' ) 'Interpolation time for > '//TRIM(Name)//' < :', CPUTime()-t1
@@ -2327,7 +2337,7 @@ CONTAINS
        END IF
 
        IF ( str(l0:l1) /= 'coordinate' ) THEN
-         Variable => VariableGet( CurrentModel % Variables,TRIM(str(l0:l1)) )
+         Variable => VariableGet( CurrentModel % Variables,TRIM(str(l0:l1)))
          IF ( .NOT. ASSOCIATED( Variable ) ) THEN
            WRITE( Message, * ) 'Can''t find INDEPENDENT variable:[', &
                TRIM(str(l0:l1)),']' // &
@@ -2556,7 +2566,7 @@ CONTAINS
 
      CASE( LIST_TYPE_VARIABLE_SCALAR_STR )
 
-       TVar => VariableGet( CurrentModel % Variables, 'Time' ) 
+       TVar => VariableGet( CurrentModel % Variables, 'Time')
        WRITE( cmd, * ) 'tx=0; st = ', TVar % Values(1)
        k = LEN_TRIM(cmd)
        CALL matc( cmd, tmp_str, k )

@@ -1423,6 +1423,15 @@ SUBROUTINE CRS_RowSumInfo( A, Values )
           DO i=1,n
              l = vperm(i)
              IF ( l > 0 ) THEN
+                 IF (Rows(i) == 1234567) THEN
+                     PRINT *, 'zvvv', i
+                 END IF
+                 IF (Rows(i + 1) == 1235428) THEN
+                     PRINT *, 'avvv', i
+                 END IF
+                 IF (Values(Rows(i + 1)-1) == 123435234) THEN
+                     PRINT *, 'vvvv', i
+                 END IF
                IF ( ANY(Values(Rows(i):Rows(i+1)-1)/=0) ) v(l)=0
              END IF
           END DO

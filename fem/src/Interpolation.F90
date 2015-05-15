@@ -134,7 +134,7 @@ MODULE Interpolation
 !------------------------------------------------------------------------------
      FUNCTION PointInElement( Element, ElementNodes, Point, &
 	  LocalCoordinates, GlobalEps, LocalEps, NumericEps, &
-          GlobalDistance, LocalDistance, EdgeBasis ) RESULT(IsInElement)
+          GlobalDistance, LocalDistance, EdgeBasis, Extrapolate ) RESULT(IsInElement)
 !------------------------------------------------------------------------------
     TYPE(Element_t), POINTER :: Element  !< Bulk element we are checking
     TYPE(Nodes_t) :: ElementNodes        !< The nodal points of the bulk element
@@ -147,10 +147,11 @@ MODULE Interpolation
     REAL(KIND=dp), OPTIONAL :: GlobalDistance !< Returns the distance from the element in global coordinates.
     REAL(KIND=dp), OPTIONAL :: LocalDistance  !< Returns the distance from the element in local coordinates.
     LOGICAL, OPTIONAL :: EdgeBasis
+    LOGICAL, OPTIONAL :: Extrapolate
 !------------------------------------------------------------------------------
     INTEGER :: n
     INTEGER :: i
-    LOGICAL :: ComputeDistance, trans
+    LOGICAL :: ComputeDistance, trans, ContinueIfOutside
     REAL(KIND=dp) :: ug,vg,wg,xdist,ydist,zdist,sumdist,eps0,eps1,eps2,escale,&
         minx,maxx,miny,maxy,minz,maxz
 !------------------------------------------------------------------------------
@@ -161,6 +162,7 @@ MODULE Interpolation
 
     IsInElement = .FALSE.
     n = Element % TYPE % NumberOfNodes
+    ContinueIfOutside = PRESENT(Extrapolate) .AND. Extrapolate
 
     ! The numberic precision 
     IF ( PRESENT(NumericEps) ) THEN
@@ -207,26 +209,28 @@ MODULE Interpolation
       
       GlobalDistance = SQRT( xdist**2 + ydist**2 + zdist**2)
       
-      IF( xdist > eps0 + eps1 * (maxx - minx) ) RETURN 
-      IF( ydist > eps0 + eps1 * (maxy - miny) ) RETURN 
-      IF( zdist > eps0 + eps1 * (maxz - minz) ) RETURN 
+      IF( .NOT. ContinueIfOutside ) THEN
+          IF( xdist > eps0 + eps1 * (maxx - minx) ) RETURN 
+          IF( ydist > eps0 + eps1 * (maxy - miny) ) RETURN 
+          IF( zdist > eps0 + eps1 * (maxz - minz) ) RETURN 
+      END IF
     ELSE
       ! Otherwise make decision independently after each coordinate direction
       
       minx = MINVAL( ElementNodes % x(1:n) )
       maxx = MAXVAL( ElementNodes % x(1:n) )
       xdist = MAX( MAX( Point(1) - maxx, 0.0_dp ), minx - Point(1) )
-      IF( xdist > eps0 + eps1 * (maxx - minx) ) RETURN 
+      IF( .NOT. ContinueIfOutside .AND. xdist > eps0 + eps1 * (maxx - minx) ) RETURN 
       
       miny = MINVAL( ElementNodes % y(1:n) )
       maxy = MAXVAL( ElementNodes % y(1:n) )
       ydist = MAX( MAX( Point(2) - maxy, 0.0_dp ), miny - Point(2) )
-      IF( ydist > eps0 + eps1 * (maxy - miny) ) RETURN 
+      IF( .NOT. ContinueIfOutside .AND. ydist > eps0 + eps1 * (maxy - miny) ) RETURN 
       
       minz = MINVAL( ElementNodes % z(1:n) )
       maxz = MAXVAL( ElementNodes % z(1:n) )
       zdist = MAX( MAX( Point(3) - maxz, 0.0_dp ), minz - Point(3) )
-      IF( zdist > eps0 + eps1 * (maxz - minz) ) RETURN 
+      IF( .NOT. ContinueIfOutside .AND. zdist > eps0 + eps1 * (maxz - minz) ) RETURN 
     END IF
 
 !   Get element local coordinates from global

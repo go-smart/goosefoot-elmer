@@ -7,7 +7,7 @@
 !------------------------------------------------------------------------------
      SUBROUTINE InterpolateMeshToMesh( OldMesh, NewMesh, OldVariables, &
             NewVariables, UseQuadrantTree, Projector, MaskName, &
-            CylindricSymmetricSolver, AffineBackTransformation )
+            CylindricSymmetricSolver, AffineBackTransformation, Extrapolate)
 !------------------------------------------------------------------------------
        USE Lists
        USE SParIterComm
@@ -23,6 +23,7 @@
        CHARACTER(LEN=*),OPTIONAL :: MaskName
        LOGICAL, OPTIONAL :: CylindricSymmetricSolver
        REAL(KIND=dp), POINTER, OPTIONAL :: AffineBackTransformation(:,:)
+       LOGICAL, OPTIONAL :: Extrapolate
 !-------------------------------------------------------------------------------
        INTEGER, ALLOCATABLE :: perm(:), vperm(:)
        INTEGER, POINTER :: nperm(:)
@@ -51,7 +52,7 @@
        INTERFACE
          SUBROUTINE InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, &
              NewVariables, UseQuadrantTree, Projector, MaskName, FoundNodes, &
-             CylindricSymmetricSolver, AffineBackTransformation )
+             CylindricSymmetricSolver, AffineBackTransformation, Extrapolate )
            USE Types
            TYPE(Variable_t), POINTER, OPTIONAL :: OldVariables, NewVariables
            TYPE(Mesh_t), TARGET  :: OldMesh, NewMesh
@@ -60,6 +61,7 @@
            TYPE(Projector_t), POINTER, OPTIONAL :: Projector
            LOGICAL, OPTIONAL :: CylindricSymmetricSolver
            REAL(KIND=dp), POINTER, OPTIONAL :: AffineBackTransformation(:,:)
+           LOGICAL, OPTIONAL :: Extrapolate
          END SUBROUTINE InterpolateMeshToMeshQ
        END INTERFACE
 !-------------------------------------------------------------------------------
@@ -68,7 +70,8 @@
          CALL InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, &
             NewVariables, UseQuadrantTree, Projector, MaskName, &
             CylindricSymmetricSolver=CylindricSymmetricSolver, &
-            AffineBackTransformation=AffineBackTransformation)
+            AffineBackTransformation=AffineBackTransformation, &
+            Extrapolate=Extrapolate)
          RETURN
       END IF
       CALL ParallelActive(.TRUE.)
@@ -80,7 +83,8 @@
       CALL InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, &
          NewVariables, UseQuadrantTree,Projector, MaskName=MaskName, FoundNodes=FoundNodes, &
          CylindricSymmetricSolver=CylindricSymmetricSolver, &
-         AffineBackTransformation=AffineBackTransformation)
+         AffineBackTransformation=AffineBackTransformation, &
+         Extrapolate=Extrapolate)
 
       ! special case "all found":
       !--------------------------
@@ -290,7 +294,8 @@
         CALL InterpolateMeshToMeshQ( OldMesh, nMesh, OldVariables, &
            nMesh % Variables, UseQuadrantTree, Projector, MaskName=MaskName, FoundNodes=FoundNodes,&
                     CylindricSymmetricSolver=CylindricSymmetricSolver, &
-         AffineBackTransformation=AffineBackTransformation)
+         AffineBackTransformation=AffineBackTransformation, &
+         Extrapolate=Extrapolate)
 
         nfound = COUNT(FoundNodes)
 
@@ -487,7 +492,7 @@ CONTAINS
 !------------------------------------------------------------------------------
      SUBROUTINE InterpolateMeshToMeshQ( OldMesh, NewMesh, OldVariables, &
             NewVariables, UseQuadrantTree, Projector, MaskName, FoundNodes, &
-            CylindricSymmetricSolver, AffineBackTransformation )
+            CylindricSymmetricSolver, AffineBackTransformation, Extrapolate )
 !------------------------------------------------------------------------------
        USE DefUtils
 !-------------------------------------------------------------------------------
@@ -501,11 +506,13 @@ CONTAINS
        LOGICAL, OPTIONAL :: FoundNodes(:)     !< List of nodes where the interpolation was a success
        LOGICAL, OPTIONAL :: CylindricSymmetricSolver 
        REAL(KIND=dp), POINTER, OPTIONAL :: AffineBackTransformation(:,:)
+       LOGICAL, OPTIONAL :: Extrapolate
        CHARACTER(LEN=90) :: PanchFile
 !------------------------------------------------------------------------------
        INTEGER :: dim,Panch
        TYPE(Nodes_t) :: ElementNodes
-       INTEGER :: nBulk, i, j, k, l, n, np, bf_id, QTreeFails, TotFails
+       INTEGER :: nBulk, i, j, k, l, n, np, bf_id, QTreeFails, TotFails, TotExtrap
+       LOGICAL :: DoExtrapolate
        REAL(KIND=dp), DIMENSION(3) :: Point, NewPoint
        INTEGER, POINTER :: Indexes(:)
        REAL(KIND=dp), DIMENSION(3) :: LocalCoordinates
@@ -513,11 +520,12 @@ CONTAINS
        INTEGER, POINTER :: OldPerm(:)
        REAL(KIND=dp), POINTER :: OldValue(:), NewValue(:), ElementValues(:)
        TYPE(Quadrant_t), POINTER :: LeafQuadrant
-       TYPE(Element_t),POINTER :: Element, Parent
+       TYPE(Element_t),POINTER :: Element, Parent, ClosestElement
        
        REAL(KIND=dp), ALLOCATABLE :: Basis(:),Vals(:),dVals(:,:), &
                           RotWBasis(:,:), WBasis(:,:)
-       REAL(KIND=dp) :: BoundingBox(6), detJ, u,v,w,s,val,rowsum, F(3,3), G(3,3)
+       REAL(KIND=dp) :: BoundingBox(6), detJ, u,v,w,s,val,rowsum, F(3,3), G(3,3), &
+           distance, closestdistance
        
        LOGICAL :: UseQTree, TryQTree, Stat, UseProjector, EdgeBasis, PiolaT
        TYPE(Quadrant_t), POINTER :: RootQuadrant
@@ -571,6 +579,7 @@ CONTAINS
 
        RootQuadrant => OldMesh % RootQuadrant
        dim = CoordinateSystemDimension()
+       DoExtrapolate = .NOT. PRESENT(Extrapolate) .OR. Extrapolate
        
        IF ( .NOT. PRESENT( UseQuadrantTree ) ) THEN
          UseQTree = .TRUE.
@@ -624,6 +633,7 @@ CONTAINS
 
        QTreeFails = 0
        TotFails = 0
+       TotExtrap = 0
 
        EdgeBasis = .FALSE.
        IF (ASSOCIATED(CurrentModel % Solver)) &
@@ -713,6 +723,8 @@ CONTAINS
            END IF
          END IF
 
+         closestdistance = HUGE(closestdistance)
+         NULLIFY(ClosestElement)
          IF( .NOT. TryQTree .OR. &
              (.NOT. Found .AND. .NOT. PRESENT( FoundNodes) ) ) THEN
            !------------------------------------------------------------------------------
@@ -728,23 +740,53 @@ CONTAINS
              ElementNodes % y(1:n) = OldMesh % Nodes % y(Indexes)
              ElementNodes % z(1:n) = OldMesh % Nodes % z(Indexes)
              
-             Found =  PointInElement( Element, ElementNodes, &
-                 Point, LocalCoordinates  ) 
+             ! ContinueIfOutside ensures that the LocalCoordinates are
+             ! actually calculated
+             Found = PointInElement( Element, ElementNodes, &
+                 Point, LocalCoordinates, GlobalDistance=distance)
              IF( Found ) THEN
                IF( TryQTree ) QTreeFails = QtreeFails + 1
                EXIT
+             END IF
+             IF (DoExtrapolate .AND. distance < closestdistance) THEN
+                 closestdistance = distance
+                 ClosestElement => Element
              END IF
            END DO
          END IF
          
          IF (.NOT.Found) THEN
-           Element => NULL()
-           IF (.NOT.PRESENT(FoundNodes) ) THEN
-             WRITE( Message,'(A,I0,A)' ) 'Point ',i,' was not found in any of the elements!'
-             CALL Info( 'InterpolateMeshToMesh', Message, Level=20 )
-             TotFails = TotFails + 1
+           ! If we have not found an element then we choose the
+           ! closest and allow extrapolation based on the local
+           ! interpolation function (effectively)
+           IF (ASSOCIATED(ClosestElement)) THEN
+               Element => ClosestElement
+               n = Element % TYPE % NumberOfNodes
+               Indexes => Element % NodeIndexes
+
+               ElementNodes % x(1:n) = OldMesh % Nodes % x(Indexes)
+               ElementNodes % y(1:n) = OldMesh % Nodes % y(Indexes)
+               ElementNodes % z(1:n) = OldMesh % Nodes % z(Indexes)
+               ! ContinueIfOutside ensures that the LocalCoordinates are
+               ! actually calculated
+               Found = PointInElement( Element, ElementNodes, &
+                   Point, LocalCoordinates, GlobalDistance=distance, &
+                   Extrapolate=.TRUE.)
+               TotExtrap = TotExtrap + 1
+               IF (Found) THEN
+                   CALL Fatal("InterpolateMeshToMeshQ", &
+                       "Inconsistency with mesh checking for extrapolation")
+               END IF
+               Found = .TRUE.
+           ELSE
+               Element => NULL()
+               IF (.NOT.PRESENT(FoundNodes) ) THEN
+                 WRITE( Message,'(A,I0,A)' ) 'Point ',i,' was not found in any of the elements!'
+                 CALL Info( 'InterpolateMeshToMesh', Message, Level=20 )
+                 TotFails = TotFails + 1
+               END IF
+               CYCLE
            END IF
-           CYCLE
          END IF
          IF ( PRESENT(FoundNodes) ) FoundNodes(i) = .TRUE.
 
@@ -846,6 +888,10 @@ CONTAINS
              WRITE( Message,'(A,I0,A,I0,A)') 'Points not found: ',TotFails,' (found ',&
                  NewMesh % NumberOfNodes - TotFails,')'
              CALL Warn( 'InterpolateMeshToMesh', Message )
+           END IF
+           IF (TotExtrap > 0) THEN
+               WRITE( Message,'(A,I0)') 'Points extrapolated: ', TotExtrap
+               CALL Warn( 'InterpolateMeshToMesh', Message )
            END IF
          END IF
 
@@ -969,6 +1015,9 @@ CONTAINS
                     Values(nrow) = WBasis(j-np,3)
                     nrow = nrow + 1                  
                   END IF
+                 IF (Values(nrow-1) == 123435234) THEN
+                     PRINT *, "weirdRMV"
+                 END IF
                 END DO
               END IF                
             END IF
@@ -1053,6 +1102,8 @@ CONTAINS
      SUBROUTINE ApplyProjector
 !------------------------------------------------------------------------------
         INTEGER :: i,k
+        LOGICAL :: Found
+        REAL(KIND=dp) :: MissedValue
         TYPE(Variable_t), POINTER :: Var
 !RMV Panch        
 !        REAL(kind=dp),DIMENSION(1000000,256)::Panchvar 
@@ -1089,6 +1140,11 @@ CONTAINS
               IF ( .NOT. (ASSOCIATED (NewSol) ) ) THEN
                  Var => Var % Next
                  CYCLE
+              END IF
+
+              MissedValue = ListGetConstReal(NewSol % Solver % Values, 'Interpolation Missed Value', Found)
+              IF (Found) THEN
+                  NewSol % Values = MissedValue
               END IF
 
               CALL CRS_ApplyProjector( Projector % Matrix, &
