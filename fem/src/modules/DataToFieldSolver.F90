@@ -284,7 +284,9 @@ CONTAINS
         !-------------------------------------------------------------------------
         weight = Basis(i)
         
-        WeightVector( j ) = WeightVector( j ) + weight  
+        IF (GivenNormalize) THEN
+            WeightVector( j ) = WeightVector( j ) + weight  
+        END IF
         ForceVector( j ) = ForceVector( j ) + weight * val
       END DO      
     END DO
