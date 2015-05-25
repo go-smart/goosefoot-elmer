@@ -335,6 +335,10 @@ MODULE Interpolation
 
     dim = CoordinateSystemDimension()
 
+    !
+    !RMV
+    dim = Mesh % MeshDim
+
     IF ( dim == 3 ) THEN
       MaxLeafElems = 16
     ELSE

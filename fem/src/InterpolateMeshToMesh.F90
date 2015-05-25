@@ -578,7 +578,9 @@ CONTAINS
 !      -------------------------------------------------------------
 
        RootQuadrant => OldMesh % RootQuadrant
-       dim = CoordinateSystemDimension()
+       !dim = CoordinateSystemDimension()
+       !RMV
+       dim = OldMesh % MeshDim
        DoExtrapolate = .NOT. PRESENT(Extrapolate) .OR. Extrapolate
        
        IF ( .NOT. PRESENT( UseQuadrantTree ) ) THEN
