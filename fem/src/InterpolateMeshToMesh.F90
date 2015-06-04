@@ -775,10 +775,11 @@ CONTAINS
                    Point, LocalCoordinates, GlobalDistance=distance, &
                    Extrapolate=.TRUE.)
                TotExtrap = TotExtrap + 1
-               IF (Found) THEN
-                   CALL Fatal("InterpolateMeshToMeshQ", &
-                       "Inconsistency with mesh checking for extrapolation")
-               END IF
+               !Apparently global values can end up here...
+               !IF (Found) THEN
+               !    CALL Fatal("InterpolateMeshToMeshQ", &
+               !        "Inconsistency with mesh checking for extrapolation")
+               !END IF
                Found = .TRUE.
            ELSE
                Element => NULL()
