@@ -191,7 +191,7 @@ CONTAINS
      SAVE nadv1
 
 !-----------------------------------------------------------------------
-     IF ( .NOT. OutputLevelMask(0) ) STOP
+     IF ( .NOT. OutputLevelMask(0) ) STOP 1
 
      nadv = .FALSE.
      IF ( PRESENT( noAdvance ) ) nadv = noAdvance
@@ -206,7 +206,7 @@ CONTAINS
         ELSE
            WRITE( *, '(A)', ADVANCE='YES' ) TRIM(String)
         END IF
-        STOP
+        STOP 1
      END IF
      nadv1 = nadv
      CALL FLUSH(6)
