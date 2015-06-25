@@ -181,16 +181,20 @@ CONTAINS
 !-----------------------------------------------------------------------
 !> This routine may be used to terminate the program in the case of an error.
 !-----------------------------------------------------------------------
-   SUBROUTINE Fatal( Caller, String, noAdvance )
+   SUBROUTINE Fatal( Caller, String, noAdvance, Code )
 !-----------------------------------------------------------------------
      CHARACTER(LEN=*) :: Caller, String
      LOGICAL, OPTIONAL :: noAdvance
+     INTEGER, OPTIONAL :: Code
 !-----------------------------------------------------------------------
 
      LOGICAL :: nadv, nadv1 = .FALSE.
+     INTEGER :: ExitCode = 1
      SAVE nadv1
 
 !-----------------------------------------------------------------------
+     IF ( PRESENT(Code) ) ExitCode = Code
+
      IF ( .NOT. OutputLevelMask(0) ) STOP 1
 
      nadv = .FALSE.
