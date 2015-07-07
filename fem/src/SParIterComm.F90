@@ -4413,14 +4413,6 @@ SUBROUTINE Recv_LocIf( SplittedMatrix, n, neigh, sizes, requests, buffer )
   INTEGER :: VecLen, TotLen
   integer :: i, j, k, ni, ierr, sproc
 
-  INTERFACE 
-    SUBROUTINE MPI_IRECV( buf,size,type,proc,tag,comm,req,ierr )
-       USE Types
-       REAL(KIND=dp)::buf(*)
-       INTEGER :: size,type,proc,tag,comm,req,ierr
-    END SUBROUTINE MPI_IRECV
-  END INTERFACE
-
   !*********************************************************************
 
   DO ni = 1, n

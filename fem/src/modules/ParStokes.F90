@@ -193,10 +193,10 @@ SUBROUTINE StokesSolver( Model,Solver,dt,TransientSimulation )
      n = SIZE(Solver % Variable % Perm)
      IF ( ANY(Solver % Variable % Perm(1:n) /= PressureSolver % Variable % Perm(1:n)) ) &
           CALL Fatal( 'ParStokes', 'Nonmatching variable permutations, &
-          use Optimize Bandwidth in pressure preconditioning' )
+          &use Optimize Bandwidth in pressure preconditioning' )
      IF ( ANY(Solver % Variable % Perm(1:n) /= VelocitySolver % Variable % Perm(1:n)) ) &
           CALL Fatal( 'ParStokes', 'Nonmatching variable permutations, &
-          use Optimize Bandwidth in velocity preconditioning' )
+          &use Optimize Bandwidth in velocity preconditioning' )
   END IF
 
 

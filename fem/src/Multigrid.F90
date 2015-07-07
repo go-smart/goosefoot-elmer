@@ -2708,6 +2708,7 @@ CONTAINS
     ! In the first time deselect the Dirichlet nodes from the candidate list
     ! their value is determined at the finest level and need not to be recomputed
     ElimDir = EliminateDir
+    elimnods = 0
     DirLim = ListGetConstReal(Params,'MG Eliminate Dirichlet Limit',GotIt)
     IF(.NOT. GotIt) DirLim = 1.0d-8      
 
@@ -3385,7 +3386,7 @@ CONTAINS
            refbond, posmax, negmax, favorneg
 
        Debug = .FALSE.
-
+       l = 0
 
        IF(Debug) CALL Info('InterpolateF2C','Starting interpolation')
        
@@ -4152,6 +4153,7 @@ CONTAINS
        COMPLEX(KIND=dp) :: coeffs(FSIZE), cvalue 
 
        Debug = .FALSE.
+       l = 0
 
        CALL Info('ComplexInterpolateF2C','Starting interpolation')
 

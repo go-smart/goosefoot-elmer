@@ -902,6 +902,8 @@ if(c_vv%numberofrows<=0) b_vv%constraintmatrix=>null()
     TYPE(ValueList_t), POINTER :: Params
     LOGICAL :: Found
 
+    TotNorm = 0.0_dp
+
     NoVar = TotMatrix % NoVar
     Params => Solver % Values
     SolverVar => Solver % Variable

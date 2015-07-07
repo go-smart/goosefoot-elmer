@@ -60,6 +60,10 @@
 
 #include "elmer/matc.h"
 
+int matc_jacobi(double a[], double b[], double x[], double eigv[],
+                double d[], int n, double rtol);
+
+
 VARIABLE *mtr_jacob(a) VARIABLE *a;
 {
   VARIABLE *x, *ev;
@@ -113,9 +117,8 @@ VARIABLE *mtr_jacob(a) VARIABLE *a;
 
 *************************************************************************/
 
-int matc_jacobi(a,b,x,eigv,d,n,rtol)
-  double a[],b[],x[],eigv[],d[],rtol;
-  int n;
+int matc_jacobi(double a[], double b[], double x[], double eigv[],
+                double d[], int n, double rtol)
 {
   register int i,j,k,ii,jj;
   int    nsmax=50,        /* Max number of sweeps */

@@ -1075,6 +1075,8 @@ END SUBROUTINE GetMaxDefs
 
     LOGICAL :: parallel
     CHARACTER(LEN=MAX_NAME_LEN) :: MeshDir, MeshName, str
+
+    MESH => NULL()
     CALL Fatal('LoadMesh', 'Not implemented due to lack of EIO.') ! TODO: better error message.
   END FUNCTION LoadMesh
 #endif

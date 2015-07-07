@@ -631,7 +631,7 @@
          DEALLOCATE( Normals, Factors, Surfaces, TYPE)
        END IF
        
-     END DO  /* Of radiation RadiationBody */
+     END DO  ! /* Of radiation RadiationBody */
 
      CALL Info( 'ViewFactors', '*** ALL DONE ***' )
      CALL FLUSH(6)

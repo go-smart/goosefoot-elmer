@@ -99,6 +99,10 @@ $  usage of the function and type of the parameters
 #include "str.h"
 #include "../config.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #ifdef DEBUG
       static FILE *fplog;
       static int tot;

@@ -24,7 +24,12 @@
 
 #include <stdio.h>
 #include <signal.h>
+#include <string.h>
 #include "../config.h"
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #ifdef USE_READLINE
 # ifdef HAVE_READLINE_READLINE_H
@@ -38,8 +43,9 @@
 # endif
 #endif 
 
-/* prototype */
+/* Prototypes */
 char *mtc_domath(char *);
+void mtc_init(FILE *, FILE *, FILE *);
 
 int main( int argc, char **argv )
 {

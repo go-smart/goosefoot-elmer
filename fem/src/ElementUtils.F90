@@ -51,6 +51,8 @@ MODULE ElementUtils
     USE Interpolation
     USE BandwidthOptimize
 
+    IMPLICIT NONE
+
 CONTAINS
 
 !------------------------------------------------------------------------------
@@ -62,6 +64,7 @@ CONTAINS
 !------------------------------------------------------------------------------
      TYPE(Solver_t) :: Solver
      REAL(KIND=dp) :: x(1), b(1)
+     INTEGER :: i
 
      TYPE(SplittedMatrixT), POINTER :: s
      TYPE(BasicMatrix_t), POINTER :: m
@@ -972,7 +975,6 @@ CONTAINS
      Matrix % DGMatrix = .FALSE.
      Matrix % Subband = DOFs
      Matrix % COMPLEX = .FALSE.
-     Matrix % FORMAT  = MatrixFormat
 
 !------------------------------------------------------------------------------
    END FUNCTION CreateOdeMatrix

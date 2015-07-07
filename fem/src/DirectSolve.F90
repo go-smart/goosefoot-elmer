@@ -285,8 +285,10 @@ CONTAINS
        CALL SolveSBandLapack( N,1,BA,x,Subband,Subband+1 )
 
      ELSE IF ( A % Format == MATRIX_BAND ) THEN
+       Subband = A % Subband
        CALL SolveBandLapack( N,1,Values,x,Subband,3*Subband+1 )
      ELSE IF ( A % Format == MATRIX_SBAND ) THEN
+       Subband = A % Subband
        CALL SolveSBandLapack( N,1,Values,x,Subband,Subband+1 )
      END IF
 

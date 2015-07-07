@@ -1636,7 +1636,7 @@ CONTAINS
          END IF
 
          WRITE(Message,'(A,I0)') 'Number of limited dofs for '&
-             //TRIM(GetVarName(Var))//': ',COUNT( LimitActive )
+             //TRIM(GetVarName(Solver % Variable))//': ',COUNT( LimitActive )
          CALL Info('DetermineSoftLimiter',Message,Level=5)
          
          IF(added >= 0) THEN

@@ -1919,7 +1919,9 @@ RETURN
     LOGICAL :: Found, UseMaxSpeed, Visited = .FALSE.
     
     SAVE Visited, MaxSpeed
-    
+   
+    SumSpeed = 0.0_dp
+ 
     IF(.NOT. Visited ) THEN
       Params => ListGetSolverParams()
       UseMaxSpeed = GetLogical( Params,'Characteristic Max Speed',Found)

@@ -27,6 +27,7 @@
 *
 
 *     T1 = ETIME( TARRAY )
+      TARRAY( 1 ) = 1.0
       T  = TARRAY( 1 )
 
       RETURN

@@ -86,6 +86,7 @@
 
      INTEGER :: DOFs
 !*******************************************************************************
+
      SolverName = 'AdvectionReaction ('// TRIM(Solver % Variable % Name) // ')'
      VariableName = TRIM(Solver % Variable % Name)
      WRITE(Message,'(A,A)')&
@@ -208,6 +209,8 @@
            Material => GetMaterial()
            BodyForce => GetBodyForce( Element )
            Equation => GetEquation()
+           CorrectedUpperLimit = 0
+           CorrectedLowerLimit = 0
            IF (LimitSolution) THEN
               dummyInt = GetElementDOFs( Indexes )
               UpperLimit(1:n) = GetReal(Material,TRIM(VariableName) // ' Upper Limit', FoundUpperLimit)
